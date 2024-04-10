@@ -1,0 +1,50 @@
+<html>
+<head>
+    <h2><%= title %></h2>
+    <h3>Cuenta "<%= datos[0].alias %>" de Oficina "<%= datos[0].oficina %>"</h3> 
+</head>
+<body>
+    <%if (message === 'ok') {%>
+        <br>
+        <table>
+            <tr>
+                <th>      
+                    <label for="nombre">Nombre:</label>
+                    <input type="text" id="nombre" maxlength="200" value="<%= datos[0].nombre %>">         
+                </th>
+                <th>
+                    <label for="alias">Alias:</label>
+                    <input type="text" id="alias" maxlength="200" value="<%= datos[0].alias %>">         
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    <label for="cbu">CBU:</label>
+                    <input type="tel" id="cbu" pattern="[0-9]{50}" required value="<%= datos[0].cbu %>">         
+                </th>  
+                <th> 
+                    <label for="estado">Estado:</label><br>
+                    <% if (datos[0].marca_baja == false) { %>
+                        <!--input type="checkbox" id="estado" checked><br-->
+                        <select id="estado">
+                            <option value="false" selected>Activa</option>
+                            <option value="true">Inactiva</option>
+                        </select>
+                    <% } else { %>
+                        <!--input type="checkbox" id="estado"><br-->
+                        <select id="estado">
+                            <option value="false">Activa</option>
+                            <option value="true" selected>Inactiva</option>
+                        </select>
+                    <% } %>
+                </th>
+            </tr>
+        </table>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="modificar_Cuenta_Cobro(<%= datos[0].id_cuenta_bancaria %>);">Guardar Cambios</button>
+    <div id="msgResultado"></div>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

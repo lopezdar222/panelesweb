@@ -1,0 +1,35 @@
+<html>
+    <head>
+        <h1><%= title %></h1>
+        <%if (registros > 0) {%>
+            <br>Oficina: <%= datos[0].operador %>
+            <br>Rol: <%= datos[0].nombre_rol %>
+            <br>Usuario: <%= datos[0].usuario %>
+        <%}%>
+    </head>
+    <body>
+        <%if (message === 'ok') {%>
+            <table>
+                <thead>
+                    <tr>
+                        <th>IP</th>
+                        <th>Fecha/Hora Apertura</th>
+                        <th>Fecha/Hora Cierre</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% datos.forEach(function(dato) { %>
+                        <tr>
+                            <td><%= dato.ip %></td>
+                            <td><%= dato.fecha_hora_creacion %></td>
+                            <td><%= dato.fecha_hora_cierre %></td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        <%} else {%>
+            <h3><%= message %></h3>
+        <%} %>
+        <button onclick="cerrarModal();">Finalizar</button>
+    </body>
+</html>

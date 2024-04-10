@@ -1,0 +1,37 @@
+<h1><%= title %></h1>
+<br>
+<style>
+    .izquierda {
+        text-align: left; /* Alinea el texto a la izquierda */
+    }
+</style>
+<div class="izquierda">
+    <p>En la <b>Configuración de Oficina</b>, se pueden visualizar los siguientes <b>atributos</b>:</p>
+    <br>
+    <ul>
+        <li><b>Oficina</b>: Descripción de la Oficina</li>
+        <li><b>N° de Contacto WhatsApp y Telegram</b>: Este es el número del Operador, cada vez que un
+            Usuario requiera atención personal o haga un retiro, se le compartirá el contacto, como así también
+            el contacto del usuario al Operador.<br>
+            Es importante que el formato de dicho número se introduzca de la siguiente manera:<br>
+            - Dígitos de País, Ejemplo: 549<br>
+            - Dítigos de Localidad, Ejemplo: 11<br>
+            - Dígitos de Número, Ejemplo: 44445555<br>
+            - Ejemplo Completo: 5491144445555 (sólo números)
+            </li>
+        <li><b>Bono de Primera Carga (en la Web)</b>: Cada vez que un Usuario ingrese por primera vez, 
+            se le brindará un Bono de Bienvenida, que consiste en un porcentaje de aumento de la primera carga que haga.</li>
+        <li><b>Carga Mínima</b>: Monto Mínimo por el que permitirá el Bot realizar una Carga.</li>
+        <li><b>Retiro Mínimo</b>: Monto Mínimo por el que permitirá el Bot realizar un Retiro.</li>
+        <li><b>Creación</b>: Fecha y Hora de creación de la Oficina en el Sistema.</li>
+        <li><b>Estado</b>: Estado de la Oficina en el Sistema.</li>
+    </ul>
+    <br>
+    <p>Para Modificar los atributos, hacer click en el botón <b>EDITAR</b></p>
+    <br>
+    <p>Dentro del menú de <b>Edición</b>, además será posible modificar:</p>
+    <br>
+    <p><b>¡Importante!</b>: El Usuario del Panel debe tener siempre Fichas de Crédito.</p>
+    <br>
+</div>
+<button onclick="cerrarModal();">Finalizar</button>

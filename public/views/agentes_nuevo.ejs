@@ -1,0 +1,34 @@
+<html>
+<body>
+    <%if (message === 'ok') {%>
+        <br>
+        <table>
+            <tr>
+                <th>
+                    <label for="usuario">Agente Usuario:</label>
+                    <input type="text" id="usuario" value=""> 
+                </th>
+                <th>
+                    <label for="password">Agente Contraseña:</label>
+                    <input type="text" id="password" value="">        
+                </th>
+            </tr>
+            <tr>       
+                <th> 
+                    <label for="oficina">Oficina:</label><br>
+                    <select id="oficina">
+                        <% datos_oficina.forEach(function(ofi) { %>
+                            <option value="<%= ofi.id_oficina %>"><%=ofi.oficina%></option>
+                        <% }); %>
+                    </select>
+                </th>
+            </tr>
+        </table>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="registrar_Agente();">Registrar Agente</button>
+    <div id="msgResultado"></div>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

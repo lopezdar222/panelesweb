@@ -1,0 +1,54 @@
+<html>
+<body>
+    <%if (message === 'ok') {%>
+        <div class="wrapper">
+            <div class="search-container">
+                <input type="search" id="search-input" placeholder="Busqueda rápida ↯">
+                <span class="material-symbols-outlined">search</span>
+
+                <button onclick="abrirModal(14);" class="help">
+                    <span class="material-symbols-outlined">help_center</span>
+                </button>
+            
+            </div>
+
+        </div>
+        <table id="miTabla">
+            <thead>
+                <tr>
+                    <th>Oficina</th>
+                    <th>Rol</th>
+                    <th>Usuario</th>
+                    <th>Creación</th>
+                    <th>Estado</th>
+                    <th></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                    <% datos.forEach(function(dato) { %>
+                    <tr>
+                        <td><%= dato.oficina %></td>
+                        <td><%= dato.nombre_rol %></td>
+                        <td><%= dato.usuario %> </td>
+                        <td><%= dato.fecha_hora_creacion %>hs</td>
+                        <% if (dato.marca_baja == true) { %>
+                            <td> Inactivo </td>
+                        <% } else { %>
+                            <td> Activo </td>
+                        <% } %>
+                        <td><button onclick="abrirModal(12, <%=dato.id_usuario %>, <%= id_rol %>);">Editar</button></td>
+                        <td><button onclick="abrirModal(26, <%=dato.id_usuario %>);">Sesiones</button></td>
+                    </tr>
+                    <% }); %>
+            </tbody>
+        </table>
+        <div id="paginacion" class="pagenumbers"></div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <%if (id_rol == 1) {%>
+        <td><button onclick="abrirModal(13, <%= id_rol %>, <%= id_usuario %>);">Nuevo Usuario</button></td>
+    <%} %>
+</body>
+</html>

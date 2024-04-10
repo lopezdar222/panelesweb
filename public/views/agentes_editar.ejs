@@ -1,0 +1,65 @@
+<html>
+<body>
+    <%if (message === 'ok') {%>
+        <br>
+        <table>
+            <tr>
+                <th>
+                    <th> 
+                        <label for="oficina">Oficina:</label><br>
+                        <select id="oficina">
+                            <% datos_oficina.forEach(function(ofi) { %>
+                                <option value="<%= ofi.id_oficina %>" 
+                                        <% if (ofi.id_oficina == datos[0].id_oficina) { %>
+                                            selected
+                                        <% } %>
+                                        >
+                                    <%= ofi.oficina %>
+                                </option>
+                            <% }); %>
+                        </select>
+                    </th>
+                </th>
+                <th>
+                    <label>Plataforma: <%= datos[0].plataforma %></label>
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    <label>Agente: <%= datos[0].agente_usuario %></label>
+                </th>
+                <th>
+                    <label for="password">Password:</label>
+                    <input type="text" id="password" maxlength="200" required value="<%= datos[0].agente_password %>">
+                </th>
+            </tr>
+            <tr>       
+                <th> 
+                    <label for="estado">Estado:</label>
+                    <% if (datos[0].marca_baja == false) { %>
+                        <!--input type="checkbox" id="estado" checked><br-->
+                        <select id="estado">
+                            <option value="false" selected>Activo</option>
+                            <option value="true">Inactivo</option>
+                        </select>
+                    <% } else { %>
+                        <!--input type="checkbox" id="estado"><br-->
+                        <select id="estado">
+                            <option value="false">Activo</option>
+                            <option value="true" selected>Inactivo</option>
+                        </select>
+                    <% } %>
+                </th>
+                <th>
+                    <label>Fecha de Creación: <%= datos[0].fecha_hora_creacion %></label>
+                </th>
+            </tr>
+        </table>
+        <button onclick="modificar_Agente(<%= datos[0].id_agente %>, <%= id_rol %>);">Guardar Cambios</button>
+        <div id="msgResultado"></div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<html>
+<head>
+    <h2><%= title %></h2> 
+</head>
+<body>
+<!----------------------INICIO FILTER & SEARCH----------------------->
+    <div class="wrapper">
+        <div class="search-container">
+            <input type="search" id="search-input" placeholder="Busqueda rápida ↯">
+            <span class="material-symbols-outlined">search</span>
+
+            <button onclick="abrirModal(18);" class="help">
+                <span class="material-symbols-outlined">help_center</span>
+            </button>
+
+        </div>
+    </div>
+    <table id="miTabla">
+        <thead>
+            <tr>
+                <th>Oficina</th>
+                <th>Fecha/Hora</th>
+                <th>App</th>
+                <th>Usuario</th>
+                <th>Monto</th>
+                <th>Procesado</th>
+                <th>Cliente Número</th>
+                <th>Cliente Usuario</th>
+                <th>Panel</th>
+            </tr>
+        </thead>
+        <tbody>	
+            <% datos.forEach(function(dato) { %>
+                <tr>
+                    <td><%= dato.operador %></td>
+                    <td><%= dato.fecha_hora %></td>
+                    <td><%= dato.nombre_aplicacion %></td>
+                    <td><%= dato.usuario_detectado %></td>
+                    <td><%= dato.monto_detectado %></td>
+                    <% if (dato.marca_procesado == true) { %>
+                        <td><%= dato.fecha_hora_procesado %></td>
+                        <% if (String(dato.pagina_panel_admin).length == 4) { %>
+                            <td>Pago Anulado</td>
+                            <td></td>
+                            <td></td>
+                        <% } else { %>
+                            <td><%= dato.cliente_numero %></td>
+                            <td><%= dato.cliente_usuario %></td>
+                            <td><%= dato.pagina_panel_admin %></td>
+                        <% } %>
+                    <% } else { %>
+                        <td> (Sin Procesar) </td>
+                        <td> - </td>
+                        <td> - </td>
+                        <td><button onclick="abrirModal(27, <%=dato.id_notificacion_carga %>);">ANULAR</button></td>
+                    <% } %>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+    <div id="paginacion" class="pagenumbers"></div>
+</body>
+</html>

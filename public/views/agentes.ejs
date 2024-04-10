@@ -1,0 +1,52 @@
+<html>
+<body>
+    <%if (message === 'ok') {%>
+        <div class="wrapper">
+            <div class="search-container">
+                <input type="search" id="search-input" placeholder="Busqueda rápida ↯">
+                <span class="material-symbols-outlined">search</span>
+
+                <button onclick="abrirModal(15);" class="help">
+                    <span class="material-symbols-outlined">help_center</span>
+                </button>
+            
+            </div>
+
+        </div>
+        <table id="miTabla">
+            <thead>
+                <tr>
+                    <th>Plataforma</th>
+                    <th>Oficina</th>
+                    <th>Agente</th>
+                    <th>Creación</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                    <% datos.forEach(function(dato) { %>
+                    <tr>
+                        <td><%= dato.plataforma %></td>
+                        <td><%= dato.oficina %></td>
+                        <td><%= dato.agente_usuario %> </td>
+                        <td><%= dato.fecha_hora_creacion %>hs</td>
+                        <% if (dato.marca_baja == true) { %>
+                            <td> Inactivo </td>
+                        <% } else { %>
+                            <td> Activo </td>
+                        <% } %>
+                        <td><button onclick="abrirModal(1, <%=dato.id_agente %>, <%=id_rol %>);">Editar</button></td>
+                    </tr>
+                    <% }); %>
+            </tbody>
+        </table>
+        <div id="paginacion" class="pagenumbers"></div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <%if (id_rol < 3) {%>
+        <td><button onclick="abrirModal(2, <%=id_rol %>, <%=id_rol %>);">Nuevo Agente</button></td>
+    <%} %>
+</body>
+</html>

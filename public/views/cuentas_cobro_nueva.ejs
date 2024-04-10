@@ -1,0 +1,41 @@
+<html>
+<head>
+    <h2><%= title %></h2>
+    <h3>Cuenta Nueva de Oficina "<%= oficina %>"</h3>
+</head>
+<body>
+    <%if (message === 'ok') {%>
+        <br>
+        <table>
+            <tr>
+                <th>
+                    <label for="nombre">Nombre:</label>
+                    <input type="text" id="nombre" maxlength="200">         
+                </th>
+                <th>
+                    <label for="alias">Alias:</label>
+                    <input type="text" id="alias" maxlength="200">         
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    <label for="cbu">CBU:</label>
+                    <input type="tel" id="cbu" pattern="[0-9]" required>         
+                </th>
+                <th> 
+                    <label for="estado">Estado:</label><br>
+                    <select id="estado">
+                        <option value="false" selected>Activa</option>
+                        <option value="true">Inactiva</option>
+                    </select>
+                </th>
+            </tr>
+        </table>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="crear_Cuenta_Cobro(<%= id_oficina %>);">Crear Cuenta</button>
+    <div id="msgResultado"></div>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

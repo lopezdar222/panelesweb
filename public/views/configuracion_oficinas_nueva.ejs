@@ -1,0 +1,64 @@
+<html>
+<head>
+    <h2><%= title %></h2>
+</head>
+<body>
+    <br>
+    <table>
+        <tr>
+            <th colspan="2">
+                <label for="oficina">Descripción:</label>
+                <input type="text" id="oficina" maxlength="200" required><br>
+            </th>
+        </tr>
+        <tr>
+            <th>
+                <label for="contactoWhatsapp">Contacto WhatsApp:</label>
+                <input type="text" id="contactoWhatsapp" pattern="[0-9]{10}" required>
+            </th>
+            <th>
+                <label for="contactoTelegram">Contacto Telegram:</label>
+                <input type="text" id="contactoTelegram" maxlength="200" required>        
+            </th>
+        </tr>
+        <tr>       
+            <th colspan="2"> 
+                <label for="estado">Estado:</label>
+                    <select id="estado">
+                        <option value="false" selected>Activa</option>
+                        <option value="true">Inactiva</option>
+                    </select><br>
+            </th>
+        </tr>
+        <tr>       
+            <th> 
+                <label for="bonoPrimeraCarga">Bono de Primera Carga (%):</label>
+                <input type="number" id="bonoPrimeraCarga" min="0" max="100" required value="20"><br>
+            </th>
+            <th> 
+                <label for="bonoCargaPerpetua">Bono de Carga Perpetua:</label>
+                <input type="number" id="bonoCargaPerpetua" min="0" max="100" required value="0">
+            </th>
+        </tr>
+        <tr>       
+            <th> 
+                <label for="minimoCarga">Mínimo de Carga:</label>
+                <input type="number" id="minimoCarga" required value="100"><br>
+            </th>
+            <th> 
+                <label for="minimoRetiro">Mínimo de Retiro:</label>
+                <input type="number" id="minimoRetiro" required value="100"><br>
+            </th>
+        </tr>
+        <tr>       
+            <th> 
+                <label for="minimoEsperaRetiro">Mínimo de Espera Para Retiro (En Horas):</label>
+                <input type="number" id="minimoEsperaRetiro" required value="24">
+            </th>
+        </tr>
+    </table>
+    <button onclick="nueva_Oficina();">Crear Oficina</button>
+    <div id="msgResultado"></div>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

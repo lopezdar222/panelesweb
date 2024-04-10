@@ -1,0 +1,38 @@
+<html>
+    <head>
+        <h1><%= title %></h1>
+        <%if (message === 'ok') {%>
+            <%= nombre_aplicacion %><br>
+            Cuenta: <%= nombre %><br>
+            Alias: <%= alias %><br>
+            CBU: <%= cbu %><br>
+        <%}%>
+    </head>
+    <body>
+        <%if (message === 'ok') {%>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Fecha/Hora</th>
+                        <th>Monto</th>
+                        <th>Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% datos.forEach(function(dato) { %>
+                        <tr>
+                            <td><%= dato.usuario %></td>
+                            <td><%= dato.fecha_hora_descarga %></td>
+                            <td><%= dato.cargas_monto %></td>
+                            <td><%= dato.cargas_cantidad %></td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        <%} else {%>
+            <h3><%= message %></h3>
+        <%} %>
+        <button onclick="cerrarModal();">Finalizar</button>
+    </body>
+</html>

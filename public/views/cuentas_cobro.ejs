@@ -1,0 +1,55 @@
+<html>
+<head>
+    <!--h1><%= title %></h1-->
+</head>
+<body>
+    <%if (message === 'ok') {%>
+        <div class="wrapper">
+            <div class="search-container">
+                <input type="search" id="search-input" placeholder="Busqueda rápida ↯">
+                <span class="material-symbols-outlined">search</span>
+
+                <button onclick="abrirModal(21);" class="help">
+                    <span class="material-symbols-outlined">help_center</span>
+                </button>
+            
+            </div>
+
+        </div>
+        <table id="miTabla">
+            <thead>
+                <tr>
+                    <th>Oficina</th>
+                    <th>Nombre</th>
+                    <th>Alias</th>
+                    <th>CBU</th>
+                    <th>Creación</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <% datos.forEach(function(dato) { %>
+                    <tr>
+                        <td><%= dato.oficina %></td>
+                        <td><%= dato.nombre %></td>
+                        <td><%= dato.alias %></td>
+                        <td><%= dato.cbu %></td>
+                        <td><%= dato.fecha_hora_creacion %></td>
+                        <% if (dato.marca_baja == true) { %>
+                            <td> Inactiva </td>
+                        <% } else { %>
+                            <td> Activa </td>
+                        <% } %>
+                        <td><button onclick="abrirModal(8, <%=dato.id_cuenta_bancaria %>);">Editar</button></td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+        <div id="paginacion" class="pagenumbers"></div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="abrirModal(9, <%=id_oficina %>);">Nueva Cuenta</button>
+</body>
+</html>

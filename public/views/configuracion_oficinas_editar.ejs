@@ -1,0 +1,77 @@
+<html>
+<head>
+    <h2><%= title %></h2>
+</head>
+<body>
+    <%if (message === 'ok') {%>
+        <br>
+        <table>
+            <tr>
+                <th colspan="2">
+                    <label for="oficina">Descripción:</label>
+                    <input type="text" id="oficina" maxlength="200" required value="<%= datos[0].oficina %>">
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    <label for="contactoWhatsapp">Contacto WhatsApp:</label>
+                    <input type="tel" id="contactoWhatsapp" pattern="[0-9]{10}" required value="<%= datos[0].contacto_whatsapp %>">        
+                </th>
+                <th>
+                    <label for="contactoTelegram">Contacto Telegram:</label>
+                    <input type="text" id="contactoTelegram" maxlength="200" required value="<%= datos[0].contacto_telegram %>">
+                </th>
+            </tr>
+            <tr>       
+                <th colspan="2"> 
+                    <label for="estado">Estado:</label>
+                    <% if (datos[0].marca_baja == false) { %>
+                        <select id="estado">
+                            <option value="false" selected>Activa</option>
+                            <option value="true">Inactiva</option>
+                        </select>
+                    <% } else { %>
+                        <select id="estado">
+                            <option value="false">Activa</option>
+                            <option value="true" selected>Inactiva</option>
+                        </select>
+                    <% } %>
+                </th>
+            </tr>
+            <tr>       
+                <th>
+                    <label for="bonoPrimeraCarga">Bono de Primera Carga (%):</label>
+                    <input type="number" id="bonoPrimeraCarga" min="0" max="100" required value="<%= datos[0].bono_carga_1 %>">
+                </th>
+                <th> 
+                    <label for="bonoCargaPerpetua">Bono de Carga Perpetua (Telegram):</label>
+                    <input type="number" id="bonoCargaPerpetua" min="0" max="100" required value="<%= datos[0].bono_carga_perpetua %>">
+                </th>
+            </tr>
+            <tr>       
+                <th> 
+                    <label for="minimoCarga">Mínimo de Carga:</label>
+                    <input type="number" id="minimoCarga" required value="<%= datos[0].minimo_carga %>">
+                </th>
+                <th> 
+                    <label for="minimoRetiro">Mínimo de Retiro:</label>
+                    <input type="number" id="minimoRetiro" required value="<%= datos[0].minimo_retiro %>">
+                </th>
+            </tr>
+            <tr>       
+                <th> 
+                    <label for="minimoEsperaRetiro">Mínimo de Espera Para Retiro (En Horas):</label>
+                    <input type="number" id="minimoEsperaRetiro" required value="<%= datos[0].minimo_espera_retiro %>">
+                </th>
+                <th> 
+                </th>
+            </tr>
+        </table>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="modificar_Oficina(<%= datos[0].id_oficina %>);">Guardar Cambios</button>
+    <div id="msgResultado"></div>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

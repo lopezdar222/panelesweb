@@ -1,0 +1,63 @@
+<html>
+<head>
+    <!--h1><%= title %></h1-->
+</head>
+<body>
+    <%if (message === 'ok') {%>
+        <div class="wrapper">
+            <div class="search-container">
+                <input type="search" id="search-input" placeholder="Busqueda rápida ↯">
+                <span class="material-symbols-outlined">search</span>
+
+                <button onclick="abrirModal(23);" class="help">
+                    <span class="material-symbols-outlined">help_center</span>
+                </button>
+            
+            </div>
+
+        </div>
+        <table id="miTabla">
+            <thead>
+                <tr>
+                    <th>Oficina</th>
+                    <th>Contacto de WhatsApp</th>
+                    <th>Contacto de Telegram</th>
+                    <th>Bono 1ra Carga</th>
+                    <th>Bono Perpetuo</th>
+                    <th>Carga Mínima</th>
+                    <th>Retiro Mínimo</th>
+                    <th>Mínimo Espera Retiro</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                    <% datos.forEach(function(dato) { %>
+                    <tr>
+                        <td><%= dato.oficina %></td>
+                        <td><%= dato.contacto_whatsapp %></td>
+                        <td><%= dato.contacto_telegram %></td>
+                        <td><%= dato.bono_carga_1 %> %</td>
+                        <td><%= dato.bono_carga_perpetua %> %</td>
+                        <td>$ <%= dato.minimo_carga %></td>
+                        <td>$ <%= dato.minimo_retiro %></td>
+                        <td><%= dato.minimo_espera_retiro %> hs</td>
+                        <% if (dato.marca_baja == true) { %>
+                            <td> Inactiva </td>
+                        <% } else { %>
+                            <td> Activa </td>
+                        <% } %>
+                        <td><button onclick="abrirModal(4, <%=dato.id_oficina %>);">Editar</button></td>
+                    </tr>
+                    <% }); %>
+            </tbody>
+        </table>
+        <div id="paginacion" class="pagenumbers"></div>
+        <%if (id_rol == 1) {%>
+            <td><button onclick="abrirModal(5);">Nueva Oficina</button></td>
+        <%} %>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html> 
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel LandingWeb</title>
+    <link rel="icon" href="../img/logo.ico">
+    <link rel="stylesheet" type="text/css" href="../css/fonts.css">
+    <link rel="stylesheet" type="text/css" href="../css/styles.css">
+  </head>
+  <body class= "sub-page">
+
+    <header>
+        <div class="top">
+            <button id="menu-btn">
+              <span class="material-symbols-outlined">menu</span>
+            </button>
+            <div class="profile">
+              Panel LandingWeb Versión 1.0
+              <div class="info">
+                <p id="usuario_usuario"></p>
+                <small class="text-muted" id="usuario_rol"></small>
+              </div>
+              <div class="profile-photo">
+                <img src="../img/user.png">
+              </div>
+            </div>
+            <div class="theme-toggler">
+              <span class="material-symbols-outlined active">dark_mode</span>
+              <span class="material-symbols-outlined">light_mode</span>
+            </div>
+          </div>
+    </header>
+
+    
+    <!----------------------INICIO ASIDE------------------------->
+    <aside class="aside close">
+      <div class="top">
+        <div class="closer toggle" id="close-btn">
+          <span class="material-symbols-outlined">menu_open</span>
+        </div>
+        <div class="logo">
+          <img src="../img/logo.ico">
+          <h2 class="text-muted">Panel<span class="primary">Web</span></h2>
+        </div>
+      </div>
+
+      <!----------------------INICIO SIDEBAR------------------------->
+      
+      <div class="sidebar" id="sideBar">
+        <a href="/usuarios" id="menu01">
+          <span class="material-symbols-outlined">settings_account_box</span>
+          <h3>Usuarios</h3>
+        </a>
+        <a href="/configuracion_oficinas" id="menu02">
+          <span class="material-symbols-outlined">room_preferences</span>
+          <h3>Configuración Oficina</h3>
+        </a>
+        <a href="/agentes" id="menu03">
+          <span class="material-symbols-outlined">apartment</span>
+          <h3>Agentes</h3>
+        </a>
+        <a href="/cuentas_cobro" id="menu04">
+          <span class="material-symbols-outlined">sync_alt</span>
+          <h3> Cuentas para <br>Transferencias</br></h3>
+        </a>
+        <a href="/cuentas_cobro_descargas" id="menu05">
+          <span class="material-symbols-outlined">vertical_align_bottom</span>
+          <h3>Descarga de Cuentas</h3>
+        </a>
+        <a href="/monitoreo_landingweb" id="menu06">
+          <span class="material-symbols-outlined">perm_device_information</span>
+          <h3>Monitoreo <b class="primary">LandingWeb</b></h3>
+        </a>
+        <a href="/reportes" id="menu07">
+          <span class="material-symbols-outlined">data_info_alert</span>  
+          <h3>Reportes</h3>
+        </a>
+        <a href="/logout" id="logout">
+          <span class="material-symbols-outlined">logout</span>
+          <h3>Cerrar Sesion</h3>
+        </a>
+      </div>
+      <!----------------------FIN SIDEBAR------------------------->
+    </aside>
+    <!----------------------FIN ASIDE------------------------->
+
+
+    <!----------------------INICIO RECENT-LOADS------------------------->
+    <div class="recent-loads !--list-group-item--" id="contenido-dinamico">
+      <!--button class="mostrar-modal" id="btn_abrir_modal">Abrir Modal</button-->
+    </div>
+    <!----------------------FIN RECENT-LOADS------------------------->
+
+
+
+    <div class="container-1" id="contenido-indicadores">
+
+      <!----------------------INICIO MAIN------------------------->
+      <!--main id="main"> 
+       
+        <div class="insights" id="contenido-dinamico01"> 
+          <div class="sales" id="indicador01">
+            <span class="material-symbols-outlined">bar_chart_4_bars</span>
+            <div class="middle">
+              <div class="left">
+                <h3>Ventas</h3> 
+                <h1>$2.524.220</h1>
+              </div>
+              <div class="progress">
+                <svg>
+                  <circle cx='38' cy='38' r='36'></circle>
+                </svg>
+                <div class="number">
+                  <p>81%</p>
+                </div>
+              </div>
+            </div>
+            <small class="text-muted">Ultimas 24Hs</small>
+          </div>
+          
+
+          <div class="income" id="indicador02"> 
+            <div class="sales">
+              <span class="material-symbols-outlined">add_chart</span>
+              <div class="middle">
+                <div class="left">
+                  <h3>Nuevos Usuarios</h3> 
+                  <h1>10.864</h1>
+                </div>
+                <div class="progress">
+                  <svg>
+                    <circle cx='38' cy='38' r='36'></circle>
+                  </svg>
+                  <div class="number">
+                    <p>44%</p>
+                  </div>
+                </div>
+              </div>
+              <small class="text-muted">Ultimas 24Hs</small>
+            </div>
+          </div>
+          
+
+        </div>
+     
+
+        <div class="right" id="contenido-dinamico02">
+          <div class="reportes">
+            <div class="item cargas-bot">
+              <div class="icon">
+                <span class="material-symbols-outlined">robot_2</span>
+              </div>
+              <div class="right">
+                <div class="info">
+                  <h3>CARGAS BOT</h3>
+                  <small class="text-muted">Ultima Hora</small>
+                </div>
+                <h5 class="success">+39%</h5>
+                <h3>3649</h3>
+              </div>
+            </div>
+
+            <div class="item cargas-operadores">
+              <div class="icon">
+                <span class="material-symbols-outlined">group</span>
+              </div>
+                <div class="right">
+                <div class="info">
+                  <h3>CARGAS OPERADORES</h3>
+                  <small class="text-muted">Ultima Hora</small>
+                </div>
+                <h5 class="danger">-17%</h5>
+                <h3>11</h3>
+              </div>
+            </div>
+
+            <div class="item nuevos-usuarios">
+              <div class="icon">
+                <span class="material-symbols-outlined">person_add</span>
+              </div>
+            <div class="right">
+              <div class="info">
+                <h3>NUEVOS USUARIOS</h3>
+                <small class="text-muted">Ultima Hora</small>
+              </div>
+                <h5 class="success">+25%</h5>
+                <h3>849</h3>
+              </div>
+            </div>
+          
+            <div class="item add-whatsapp">
+              <div class="icon">
+                <span class="material-symbols-outlined">maps_ugc</span>
+              </div>
+              <h3>Agregar WhatsApp</h3>
+            </div>
+          </div>
+
+          <div class="recent-update">
+            <div class="updates">
+              <h1>Actividad Operadores</h1>
+              <div class="update">
+                <div class="profile-photo">
+                  <img src="../img/user.png">
+                </div>
+                <div class="message">
+                  <p><b>Operador4, OF2 </b>Actualizacion de carga pendiente.</p>
+                  <small class="text-muted">Hace 1 Minutos</small>
+                </div>
+                <div class="update">
+                <div class="profile-photo">
+                  <img src="../img/user.png">
+                </div>
+                <div class="message">
+                  <p><b>Operador3, OF2 </b>Verificacion reclamo de usuario</p>
+                  <small class="text-muted">Hace 3 Minutos</small>
+                </div>
+                </div>
+                <div class="update">
+                <div class="profile-photo">
+                  <img src="../img/user.png">
+                </div>
+                <div class="message">
+                  <p><b>Operador6, OF1 </b>Carga cliente Juan1</p>
+                  <small class="text-muted">Hace 5 Minutos</small>
+                </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>     
+
+
+      </main-->
+
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="miModal" >
+        <div class="modal-contenido">
+          <span class="cerrar-modal" id="btn_cerrar_modal">&times;</span>
+          <div class="content" id="modal-contenido">
+          </div>
+        </div>
+    </div>
+
+    <script src="../js/principal.js"></script>
+    <script src="../js/func-principal.js"></script>
+  </body>
+</html>

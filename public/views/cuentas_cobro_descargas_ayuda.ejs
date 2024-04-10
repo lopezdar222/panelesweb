@@ -1,0 +1,30 @@
+<h1><%= title %></h1>
+<br>
+<style>
+    .izquierda {
+        text-align: left; /* Alinea el texto a la izquierda */
+    }
+</style>
+<div class="izquierda">
+    <p>En la configuración de <b>Descargas de Cuentas</b>, se pueden visualizar los siguientes <b>atributos</b>:</p>
+    <br>
+    <ul>
+        <li><b>Oficina</b>: Descripción de la Oficina</li>
+        <li><b>Nombre</b>: Nombre del Titular de la Cuenta.</li>
+        <li><b>Alias</b>: Alias de la Cuenta.</li>
+        <li><b>CBU</b>: CBU de la Cuenta.</li>
+        <li><b>Monto</b>: Monto total de cobros que lleva acumulado desde la Última Descarga o desde el Comienzo de su uso.</li>
+        <li><b>Cantidad</b>: Cantidad total de cobros que lleva acumulado desde la Última Descarga o desde el Comienzo de su suo.</li>
+        <li><b>Estado</b>: Estado de la Cuenta para Transferencias en el Sistema. Si está Inactiva, 
+            el Bot no la propondrá al Cliente.</li>
+    </ul>
+    <br><br><br>
+    <p>Para visualizar el <b>Historial de Descargas</b> hacer click en el botón <b>VER</b>.</p>
+    <br><br><br>
+    <p>Para <b>Realizar una Nueva Descarga</b> hacer click en el botón <b>DESCARGAR</b>.</p>
+    <br><br><br>
+    <p>Tener en cuenta que el <b>Bot propone a los Clientes siempre la cuenta con menor Monto y Cantidad</b>.
+        A medida van sucediendo las cargas, esos valores van cambiando, así también las Cuentas propuestas por el Bot.</p>
+    <br>
+</div>
+<button onclick="cerrarModal();">Finalizar</button>

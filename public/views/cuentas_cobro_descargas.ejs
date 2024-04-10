@@ -1,0 +1,58 @@
+<html>
+<head>
+    <!--h1><%= title %></h1-->
+</head>
+<body>
+    <%if (message === 'ok') {%>
+        <div class="wrapper">
+            <div class="search-container">
+                <input type="search" id="search-input" placeholder="Busqueda rápida ↯">
+                <span class="material-symbols-outlined">search</span>
+
+                <button onclick="abrirModal(22);" class="help">
+                    <span class="material-symbols-outlined">help_center</span>
+                </button>
+            
+            </div>
+
+        </div>
+        <table id="miTabla">
+            <thead>
+                <tr>
+                    <th>Oficina</th>
+                    <th>Nombre</th>
+                    <th>Alias</th>
+                    <th>CBU</th>
+                    <th>Monto</th>
+                    <th>Cantidad</th>
+                    <th>Estado</th>
+                    <th>Historial</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <% datos_cobros.forEach(function(cobro) { %>
+                    <tr>
+                        <td><%= cobro.oficina %></td>
+                        <td><%= cobro.nombre %></td>
+                        <td><%= cobro.alias %></td>
+                        <td><%= cobro.cbu %></td>
+                        <td>$ <%= cobro.monto_cargas %></td>
+                        <td><%= cobro.cantidad_cargas %></td>
+                        <% if (cobro.marca_baja == true) { %>
+                            <td> Inactiva </td>
+                        <% } else { %>
+                            <td> Activa </td>
+                        <% } %>
+                        <td><button onclick="abrirModal(11, <%=cobro.id_cuenta_bancaria %>);">Ver</button></td>
+                        <td><button onclick="abrirModal(10, <%=cobro.id_cuenta_bancaria %>);">Descargar</button></td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+        <div id="paginacion" class="pagenumbers"></div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<html>
+<body>
+    <%if (message === 'ok') {%>
+        <br>
+        <table>
+            <tr>
+                <th>
+                    <label>Usuario <%= datos[0].usuario %></label>
+                </th>
+                <th>
+                    <label for="password">Contraseña:</label>
+                    <input type="text" id="password" value="">        
+                </th>
+            </tr>
+            <tr>       
+                <th> 
+                    <label for="estado">Estado:</label>
+                    <% if (datos[0].marca_baja == false) { %>
+                        <!--input type="checkbox" id="estado" checked><br-->
+                        <select id="estado">
+                            <option value="false" selected>Activo</option>
+                            <option value="true">Inactivo</option>
+                        </select>
+                    <% } else { %>
+                        <!--input type="checkbox" id="estado"><br-->
+                        <select id="estado">
+                            <option value="false">Activo</option>
+                            <option value="true" selected>Inactivo</option>
+                        </select>
+                    <% } %>
+                </th>
+                <th>
+                    <label>Fecha de Creación: <%= datos[0].fecha_hora_creacion %></label>
+                </th>
+            </tr>
+            <tr>       
+                <th> 
+                    <label for="rol">Rol:</label>
+                    <% if (id_rol < 3) { %>
+                        <select id="rol">
+                            <% if (datos[0].id_rol == 2) { %>
+                                <option value="2" selected>Encargado</option>
+                                <option value="3">Operador</option>
+                            <% } else if (datos[0].id_rol == 1) { %>
+                                <option value="1" selected>Administrador</option>
+                                <option value="2">Encargado</option>
+                                <option value="3">Operador</option>
+                            <% } else { %>
+                                <option value="2">Encargado</option>
+                                <option value="3" selected>Operador</option>
+                            <% } %>
+                        </select>
+                    <% } else { %>
+                        <select id="rol">
+                            <option value="<%= datos[0].id_rol %>"><%= datos[0].nombre_rol %></option>
+                        </select>
+                    <% } %>
+                </th>
+                <th> 
+                    <label for="oficina">Oficina:</label><br>
+                    <select id="oficina">
+                        <% datos_oficina.forEach(function(ofi) { %>
+                            <option value="<%= ofi.id_oficina %>" 
+                                    <% if (ofi.id_oficina == datos[0].id_oficina) { %>
+                                        selected
+                                    <% } %>
+                                    >
+                                <%= ofi.oficina %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </th>
+            </tr>
+        </table>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="modificar_Usuario(<%= datos[0].id_usuario %>);">Guardar Cambios</button>
+    <div id="msgResultado"></div>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>
