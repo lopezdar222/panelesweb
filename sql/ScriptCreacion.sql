@@ -901,5 +901,3 @@ select * from oficina
 update operacion set id_estado = 2 where id_operacion = 23;
 update oficina set minimo_espera_retiro = 0;
 select * from estado
-
-
