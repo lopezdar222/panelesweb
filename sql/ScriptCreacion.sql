@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS plataforma
     plataforma character varying(200) NOT NULL,
     url_admin character varying(200) NOT NULL,
     url_juegos character varying(200) NOT NULL,
+	imagen character varying(200) NOT NULL DEFAULT '-',
     marca_baja boolean NOT NULL DEFAULT false,
     PRIMARY KEY (id_plataforma)
 );
@@ -141,6 +142,7 @@ CREATE TABLE IF NOT EXISTS cliente
     id_agente integer NOT NULL,
     en_sesion boolean NOT NULL DEFAULT false,
     marca_baja boolean NOT NULL DEFAULT false,
+	bloqueado boolean NOT NULL DEFAULT false,
     fecha_hora_creacion timestamp NOT NULL,
 	id_usuario_creacion integer NOT NULL DEFAULT 0,
     fecha_hora_ultima_modificacion timestamp NOT NULL,
@@ -192,6 +194,8 @@ CREATE TABLE IF NOT EXISTS operacion_retiro
     cbu character varying(200) NOT NULL,
     titular character varying(200) NOT NULL,
     importe numeric NOT NULL,
+	sol_importe numeric NOT NULL DEFAULT 0,
+	observaciones character varying(200) default '',
     PRIMARY KEY (id_operacion_retiro)
 );
 CREATE INDEX operacion_retiro_id_operacion ON operacion_retiro (id_operacion);
@@ -205,6 +209,10 @@ CREATE TABLE IF NOT EXISTS operacion_carga
     importe numeric NOT NULL,
     bono numeric NOT NULL DEFAULT 0,
     id_cuenta_bancaria integer NOT NULL,
+	sol_importe numeric NOT NULL DEFAULT 0,
+	sol_bono numeric NOT NULL DEFAULT 0,
+	sol_id_cuenta_bancaria integer NOT NULL DEFAULT 0,
+	observaciones character varying(200) default '',
     PRIMARY KEY (id_operacion_carga)
 );
 CREATE INDEX operacion_carga_id_operacion ON operacion_carga (id_operacion);
@@ -245,10 +253,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION Insertar_Agente(in_id_usuario INTEGER, usr VARCHAR(50), pass VARCHAR(200), ofi INTEGER) RETURNS VOID AS $$
+--DROP FUNCTION Insertar_Agente(in_id_usuario INTEGER, usr VARCHAR(50), pass VARCHAR(200), ofi INTEGER)
+CREATE OR REPLACE FUNCTION Insertar_Agente(in_id_usuario INTEGER, in_usuario VARCHAR(50), in_password VARCHAR(200), in_id_oficina INTEGER, in_id_plataforma INTEGER) RETURNS VOID AS $$
 BEGIN
 	INSERT INTO agente (agente_usuario, agente_password, id_plataforma, id_oficina, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-	VALUES (usr, pass, 1, ofi, now(), in_id_usuario, now(), in_id_usuario);
+	VALUES (in_usuario, in_password, in_id_plataforma, in_id_oficina, now(), in_id_usuario, now(), in_id_usuario);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -431,11 +440,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION Modificar_Agente(in_id_agente integer, in_id_usuario integer, pass VARCHAR(200), in_estado BOOLEAN, in_id_oficina INTEGER) RETURNS VOID AS $$
+--DROP FUNCTION Modificar_Agente(in_id_agente integer, in_id_usuario integer, pass VARCHAR(200), in_estado BOOLEAN, in_id_oficina INTEGER, in_id_plataforma INTEGER)
+CREATE OR REPLACE FUNCTION Modificar_Agente(in_id_agente integer, in_id_usuario integer, pass VARCHAR(200), in_estado BOOLEAN, in_id_oficina INTEGER, in_id_plataforma INTEGER) RETURNS VOID AS $$
 BEGIN
 	UPDATE agente 
 	SET agente_password = pass,
 		id_oficina = in_id_oficina, 
+		id_plataforma = in_id_plataforma,
 		id_usuario_ultima_modificacion = in_id_usuario,
 		fecha_hora_ultima_modificacion = now(),
 		marca_baja = in_estado
@@ -465,7 +476,8 @@ $$ LANGUAGE plpgsql;
 --select * from Obtener_Usuario('dario', true);
 --select * from usuario order by 1 desc
 
-CREATE OR REPLACE FUNCTION Insertar_Oficina(in_id_usuario INTEGER, in_oficina VARCHAR(200), in_contacto_whatsapp VARCHAR(200), in_contacto_telegram VARCHAR(200), in_bono_carga_1 INTEGER, in_bono_carga_perpetua INTEGER, in_minimo_carga INTEGER, in_minimo_retiro INTEGER, in_minimo_espera_retiro INTEGER) 
+--DROP FUNCTION Insertar_Oficina(in_id_usuario INTEGER, in_oficina VARCHAR(200), in_contacto_whatsapp VARCHAR(200), in_contacto_telegram VARCHAR(200), in_bono_carga_1 INTEGER, in_bono_carga_perpetua INTEGER, in_minimo_carga INTEGER, in_minimo_retiro INTEGER, in_minimo_espera_retiro INTEGER) 
+CREATE OR REPLACE FUNCTION Insertar_Oficina(in_id_usuario INTEGER, in_oficina VARCHAR(200), in_contacto_whatsapp VARCHAR(200), in_contacto_telegram VARCHAR(200), in_estado BOOLEAN, in_bono_carga_1 INTEGER, in_bono_carga_perpetua INTEGER, in_minimo_carga INTEGER, in_minimo_retiro INTEGER, in_minimo_espera_retiro INTEGER)
 RETURNS TABLE (id_oficina INTEGER) AS $$
 DECLARE
     aux_id_oficina INTEGER;
@@ -474,8 +486,8 @@ BEGIN
 	IF NOT EXISTS(	select 1
 					from oficina o
 					where o.oficina = in_oficina) THEN					
-		INSERT INTO oficina (oficina, contacto_whatsapp, contacto_telegram, bono_carga_1, bono_carga_perpetua, minimo_carga, minimo_retiro, minimo_espera_retiro, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-		VALUES (in_oficina, in_contacto_whatsapp, in_contacto_telegram, in_bono_carga_1, in_bono_carga_perpetua, in_minimo_carga, in_minimo_retiro, in_minimo_espera_retiro, now(), in_id_usuario, now(), in_id_usuario)
+		INSERT INTO oficina (oficina, contacto_whatsapp, contacto_telegram, marca_baja, bono_carga_1, bono_carga_perpetua, minimo_carga, minimo_retiro, minimo_espera_retiro, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+		VALUES (in_oficina, in_contacto_whatsapp, in_contacto_telegram, in_estado, in_bono_carga_1, in_bono_carga_perpetua, in_minimo_carga, in_minimo_retiro, in_minimo_espera_retiro, now(), in_id_usuario, now(), in_id_usuario)
 		RETURNING oficina.id_oficina INTO aux_id_oficina;		
 	ELSE
 		aux_id_oficina := 0;
@@ -571,7 +583,7 @@ END;
 $$ LANGUAGE plpgsql;
 --select * from Modificar_Cuenta_Bancaria(1, 1, 'Noelia Caleza', 'noelia.227.caleza.mp', '0000003100091595755417' , 1, false);
 
-DROP VIEW v_Cuenta_Bancaria_Activa;
+--DROP VIEW v_Cuenta_Bancaria_Activa;
 CREATE OR REPLACE VIEW v_Cuenta_Bancaria_Activa AS
 SELECT 	cb.id_oficina,
 		o.oficina,
@@ -580,36 +592,32 @@ SELECT 	cb.id_oficina,
 		cb.alias,
 		cb.cbu,
 		cb.marca_baja,
-		coalesce(count(oc.importe), 0)		as cantidad_cargas,
-		coalesce(sum(oc.importe), 0)		as monto_cargas,
+		coalesce(cbc.cantidad_cargas, 0)	as cantidad_cargas,
+		coalesce(cbc.monto_cargas, 0)		as monto_cargas,
 		DENSE_RANK() OVER (PARTITION BY cb.id_oficina, o.oficina
-						   ORDER BY coalesce(sum(oc.importe), 0), coalesce(count(oc.importe), 0)) as orden
+						   ORDER BY coalesce(cbc.monto_cargas, 0), coalesce(cbc.cantidad_cargas, 0)) as orden
 FROM 	cuenta_bancaria cb join oficina o
 			on (cb.id_oficina = o.id_oficina
 			   	AND cb.marca_baja = false)
-		left join (select id_cuenta_bancaria, 
-				   			max(fecha_hora_descarga) as fecha_descarga
-				  from cuenta_bancaria_descarga
-				  where marca_baja = false
-				  group by id_cuenta_bancaria) cbd
-			on (cb.id_cuenta_bancaria = cbd.id_cuenta_bancaria)
-		left join operacion_carga oc
-			on (oc.id_cuenta_bancaria = cb.id_cuenta_bancaria)
-		left join operacion op
-			on (op.id_operacion = oc.id_operacion
-			   	and op.id_accion = 1  --accion de carga
-			   	and op.id_estado = 2  --estado finalizado
-				and op.marca_baja = false
-			   	and op.fecha_hora_ultima_modificacion > coalesce(cbd.fecha_descarga, '1900-01-01'))				
-GROUP BY cb.id_oficina,
-		o.oficina,
-		cb.id_cuenta_bancaria,
-		cb.nombre,
-		cb.alias,
-		cb.cbu,
-		cb.marca_baja
-ORDER BY cb.id_oficina, monto_cargas, cantidad_cargas;
---SELECT * FROM v_Cuenta_Bancaria_Activa;
+		LEFT JOIN (select 	oc.id_cuenta_bancaria, 
+							count(oc.importe) as cantidad_cargas, 
+							sum(oc.importe) as monto_cargas
+					from 	operacion_carga oc join operacion op
+							on (op.id_operacion = oc.id_operacion
+									and op.marca_baja = false
+									and op.id_accion IN (1,5)  --accion de carga
+									and op.id_estado = 2) --estado aceptado
+				   			join (select 	id_cuenta_bancaria, 
+											max(fecha_hora_descarga) as fecha_descarga
+										from cuenta_bancaria_descarga
+										where marca_baja = false
+										group by id_cuenta_bancaria) cbd
+								on (oc.id_cuenta_bancaria = cbd.id_cuenta_bancaria
+									and op.fecha_hora_ultima_modificacion >= cbd.fecha_descarga)
+					group by oc.id_cuenta_bancaria) cbc
+			on (cb.id_cuenta_bancaria = cbc.id_cuenta_bancaria)
+ORDER BY cb.id_oficina, coalesce(cbc.monto_cargas, 0), coalesce(cbc.cantidad_cargas, 0);
+--SELECT * FROM v_Cuenta_Bancaria_Activa
 
 --DROP FUNCTION Descargar_Cuenta_Bancaria(in_id_usuario INTEGER, in_id_cuenta_bancaria INTEGER);
 CREATE OR REPLACE FUNCTION Descargar_Cuenta_Bancaria(in_id_usuario INTEGER, in_id_cuenta_bancaria INTEGER) 
@@ -645,14 +653,16 @@ $$ LANGUAGE plpgsql;
 -- select * from Descargar_Cuenta_Bancaria(1,8);
 
 insert into estado(estado) values ('Pendiente');
-insert into estado(estado) values ('Procesado');
+insert into estado(estado) values ('Aceptado');
 insert into estado(estado) values ('Rechazado');
---select * from estado;
+--select * from estado order by 1;
 
 insert into accion(accion) values ('Carga');
 insert into accion(accion) values ('Retiro');
 insert into accion(accion) values ('Cambio de Contraseña');
 insert into accion(accion) values ('Desbloqueo de Usuario');
+insert into accion(accion) values ('Carga Manual');
+insert into accion(accion) values ('Retiro Manual');
 --select * from accion;
 
 --DROP FUNCTION Obtener_Oficina();
@@ -673,27 +683,107 @@ RETURNS TABLE (id_operacion INTEGER, codigo_operacion INTEGER) AS $$
 DECLARE
     aux_id_operacion INTEGER;
     aux_codigo_operacion INTEGER;
+    aux_id_estado INTEGER;
 BEGIN
+	IF (in_id_accion IN (3,4)) THEN
+		aux_id_estado := 2;
+	ELSE
+		aux_id_estado := 1;
+	END IF;
+
 	SELECT	COALESCE(COUNT(c.id_operacion), 0) + 1
 	INTO 	aux_codigo_operacion
 	FROM operacion c
 	WHERE c.id_cliente = in_id_cliente;
 	
 	INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-	VALUES (aux_codigo_operacion, in_id_accion, in_id_cliente, 1, false, false, now(), now(), 1)
+	VALUES (aux_codigo_operacion, in_id_accion, in_id_cliente, aux_id_estado, false, false, now(), now(), 1)
 	RETURNING operacion.id_operacion INTO aux_id_operacion;
 	
 	IF (in_id_accion = 1) THEN
-		INSERT INTO operacion_carga (id_operacion, titular, importe, id_cuenta_bancaria, bono)
-		VALUES (aux_id_operacion, in_titular, in_importe, in_id_cuenta_bancaria, in_bono);
+		INSERT INTO operacion_carga (id_operacion, titular, importe, id_cuenta_bancaria, bono, sol_importe, sol_id_cuenta_bancaria, sol_bono)
+		VALUES (aux_id_operacion, in_titular, in_importe, in_id_cuenta_bancaria, in_bono, in_importe, in_id_cuenta_bancaria, in_bono);
 	END IF;
 	
 	IF (in_id_accion = 2) THEN
-		INSERT INTO operacion_retiro (id_operacion, cbu, titular, importe)
-		VALUES (aux_id_operacion, in_cbu, in_titular, in_importe);
+		INSERT INTO operacion_retiro (id_operacion, cbu, titular, importe, sol_importe)
+		VALUES (aux_id_operacion, in_cbu, in_titular, in_importe, in_importe);
 	END IF;
 	
 	RETURN QUERY SELECT aux_id_operacion, aux_codigo_operacion;
+END;
+$$ LANGUAGE plpgsql;
+
+--DROP FUNCTION Registrar_Carga_Manual(in_id_cliente INTEGER, in_id_usuario INTEGER, in_importe NUMERIC, in_bono INTEGER, in_titular VARCHAR(200), in_id_cuenta_bancaria INTEGER, in_observaciones VARCHAR(200))  
+CREATE OR REPLACE FUNCTION Registrar_Carga_Manual(in_id_cliente INTEGER, in_id_usuario INTEGER, in_importe NUMERIC, in_bono INTEGER, in_titular VARCHAR(200), in_id_cuenta_bancaria INTEGER, in_observaciones VARCHAR(200)) 
+RETURNS TABLE (id_operacion INTEGER, codigo_operacion INTEGER) AS $$
+DECLARE
+    aux_id_operacion INTEGER;
+    aux_codigo_operacion INTEGER;
+BEGIN
+	SELECT	COALESCE(COUNT(ope.id_operacion), 0) + 1
+	INTO 	aux_codigo_operacion
+	FROM operacion ope
+	WHERE ope.id_cliente = in_id_cliente;
+	
+	INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+	VALUES (aux_codigo_operacion, 5, in_id_cliente, 2, false, false, now(), now(), in_id_usuario)
+	RETURNING operacion.id_operacion INTO aux_id_operacion;
+	
+	INSERT INTO operacion_carga (id_operacion, titular, importe, id_cuenta_bancaria, bono, sol_importe, sol_id_cuenta_bancaria, sol_bono)
+	VALUES (aux_id_operacion, in_titular, in_importe, in_id_cuenta_bancaria, in_bono, in_importe, in_id_cuenta_bancaria, in_bono);
+	
+	RETURN QUERY SELECT aux_id_operacion, aux_codigo_operacion;
+END;
+$$ LANGUAGE plpgsql;
+
+--DROP FUNCTION Modificar_Cliente_Carga(in_id_operacion INTEGER, in_id_estado INTEGER, in_importe NUMERIC, in_bono NUMERIC, in_id_cuenta_bancaria INTEGER, in_id_usuario INTEGER) 
+CREATE OR REPLACE FUNCTION Modificar_Cliente_Carga(in_id_operacion INTEGER, in_id_estado INTEGER, in_importe NUMERIC, in_bono NUMERIC, in_id_cuenta_bancaria INTEGER, in_id_usuario INTEGER) 
+RETURNS VOID AS $$
+BEGIN	
+	UPDATE operacion
+	SET	fecha_hora_ultima_modificacion = NOW(),
+		id_usuario_ultima_modificacion = in_id_usuario,
+		id_estado = in_id_estado
+	WHERE id_operacion = in_id_operacion;
+	
+	IF (in_id_estado = 2) THEN
+		UPDATE operacion_carga
+		SET	importe = in_importe,
+			bono = in_bono,
+			id_cuenta_bancaria = in_id_cuenta_bancaria
+		WHERE id_operacion = in_id_operacion;
+	END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+--DROP FUNCTION Modificar_Cliente_Retiro(in_id_operacion INTEGER, in_id_estado INTEGER, in_importe NUMERIC, in_bono NUMERIC, in_id_cuenta_bancaria INTEGER, in_id_usuario INTEGER) 
+CREATE OR REPLACE FUNCTION Modificar_Cliente_Retiro(in_id_operacion INTEGER, in_id_estado INTEGER, in_importe NUMERIC, in_id_usuario INTEGER) 
+RETURNS VOID AS $$
+BEGIN	
+	UPDATE operacion
+	SET	fecha_hora_ultima_modificacion = NOW(),
+		id_usuario_ultima_modificacion = in_id_usuario,
+		id_estado = in_id_estado
+	WHERE id_operacion = in_id_operacion;
+	
+	IF (in_id_estado = 2) THEN
+		UPDATE operacion_retiro
+		SET	importe = in_importe
+		WHERE id_operacion = in_id_operacion;
+	END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+--DROP FUNCTION Bloqueo_Cliente(in_id_usuario INTEGER, in_id_cliente INTEGER, in_bloqueado BOOLEAN) 
+CREATE OR REPLACE FUNCTION Bloqueo_Cliente(in_id_usuario INTEGER, in_id_cliente INTEGER, in_bloqueado BOOLEAN) 
+RETURNS VOID AS $$
+BEGIN
+	UPDATE cliente
+	SET	fecha_hora_ultima_modificacion = NOW(),
+		id_usuario_ultima_modificacion = in_id_usuario,
+		bloqueado = in_bloqueado
+	WHERE id_cliente = in_id_cliente;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -727,6 +817,17 @@ SELECT 	id_oficina,
 FROM oficina;
 --select * from v_Oficinas;
 
+--DROP VIEW v_Plataformas;
+CREATE OR REPLACE VIEW v_Plataformas AS
+SELECT 	id_plataforma,
+		plataforma,
+		url_admin,
+		url_juegos,
+		imagen,
+		marca_baja
+FROM plataforma;
+--select * from v_Plataformas;
+
 --DROP VIEW v_Cuentas_Bancarias;
 CREATE OR REPLACE VIEW v_Cuentas_Bancarias AS
 SELECT	cn.id_cuenta_bancaria,
@@ -739,6 +840,7 @@ SELECT	cn.id_cuenta_bancaria,
 		cn.marca_baja
 FROM cuenta_bancaria cn JOIN oficina o
 		ON (cn.id_oficina = o.id_oficina);
+--select * from v_Cuentas_Bancarias
 
 -- DROP VIEW v_Cuentas_Bancarias_Descargas;
 CREATE OR REPLACE VIEW v_Cuentas_Bancarias_Descargas AS
@@ -756,6 +858,7 @@ from cuenta_bancaria_descarga cbd join cuenta_bancaria cb
 			on (cbd.id_cuenta_bancaria = cb.id_cuenta_bancaria)
 		join usuario u
 			on (u.id_usuario = cbd.id_usuario);
+--select * from v_Cuentas_Bancarias_Descargas
 
 -- DROP VIEW v_Agentes;
 CREATE OR REPLACE VIEW v_Agentes AS
@@ -826,7 +929,7 @@ SELECT 	c.id_cliente,
 FROM cliente c LEFT JOIN operacion o
 			ON (c.id_cliente = o.id_cliente
 			   AND o.marca_baja = false
-			   AND o.id_accion = 1
+			   AND o.id_accion IN (1, 5)
 			   AND o.id_estado = 2)
 		LEFT JOIN operacion_carga oc
 			ON (o.id_operacion = oc.id_operacion)
@@ -846,7 +949,7 @@ SELECT 	c.id_cliente,
 FROM cliente c LEFT JOIN operacion o
 			ON (c.id_cliente = o.id_cliente
 			   AND o.marca_baja = false
-			   AND o.id_accion = 2
+			   AND o.id_accion IN (2, 6)
 			   AND o.id_estado = 2)
 		LEFT JOIN operacion_retiro oc
 			ON (o.id_operacion = oc.id_operacion)
@@ -854,6 +957,7 @@ WHERE c.marca_baja = false
 GROUP BY c.id_cliente, c.cliente_usuario, c.id_agente;
 --SELECT * FROM v_Clientes_Retiros;
 
+--DROP VIEW v_Clientes_Operaciones
 CREATE OR REPLACE VIEW v_Clientes_Operaciones AS
 SELECT 	cl.id_cliente,
 		cl.cliente_usuario,
@@ -861,7 +965,10 @@ SELECT 	cl.id_cliente,
 		ag.agente_usuario,
 		ag.agente_password,
 		ag.id_plataforma,
+		pla.plataforma,
 		ag.id_oficina,
+		o.marca_baja,
+		ofi.oficina,
 		o.id_operacion,
 		o.codigo_operacion,
 		e.id_estado,
@@ -869,13 +976,16 @@ SELECT 	cl.id_cliente,
 		ac.id_accion,
 		ac.accion,
 		COALESCE(o.fecha_hora_creacion, '1900-01-01')		AS fecha_hora_operacion,
+		COALESCE(o.fecha_hora_ultima_modificacion, '1900-01-01')	AS fecha_hora_proceso,
 		COALESCE(opr.importe, 0)							AS retiro_importe,
 		COALESCE(opr.cbu, '')								AS retiro_cbu,
 		COALESCE(opr.titular, '')							AS retiro_titular,
+		COALESCE(opr.observaciones, '')						AS retiro_observaciones,
 		COALESCE(opc.importe, 0)							AS carga_importe,
 		COALESCE(opc.titular, '')							AS carga_titular,
 		COALESCE(opc.id_cuenta_bancaria, 0)					AS carga_id_cuenta_bancaria,
-		COALESCE(opc.bono, 0)								AS carga_bono
+		COALESCE(opc.bono, 0)								AS carga_bono,
+		COALESCE(opc.observaciones, '')						AS carga_observaciones		
 FROM cliente cl JOIN operacion o
 			ON (cl.id_cliente = o.id_cliente
 			   	AND o.marca_baja = false)
@@ -885,19 +995,68 @@ FROM cliente cl JOIN operacion o
 			ON (o.id_accion = ac.id_accion)
 		JOIN agente ag
 			ON (cl.id_agente = ag.id_agente)
+		JOIN oficina ofi
+			ON (ag.id_oficina = ofi.id_oficina)
+		JOIN plataforma pla
+			ON (ag.id_plataforma = pla.id_plataforma)
 		LEFT JOIN operacion_retiro opr
 			ON (o.id_operacion = opr.id_operacion)
 		LEFT JOIN operacion_carga opc
 			ON (o.id_operacion = opc.id_operacion)
 WHERE cl.marca_baja = false;
---select * from v_Clientes_Operaciones
+--select * from v_Clientes_Operaciones order by id_operacion desc
+
+--DROP VIEW v_Clientes
+CREATE OR REPLACE VIEW v_Clientes AS
+SELECT 	cl.id_cliente,
+		cl.cliente_usuario,
+		cl.cliente_password,
+		cl.bloqueado,
+		cl.id_agente,
+		ag.agente_usuario,
+		ag.agente_password,
+		ag.id_plataforma,
+		pla.plataforma,
+		ag.id_oficina,
+		ofi.oficina,
+		COALESCE(MAX(ope.id_operacion), 100000000) as ult_operacion
+FROM cliente cl JOIN agente ag
+			ON (cl.id_agente = ag.id_agente)
+		JOIN oficina ofi
+			ON (ag.id_oficina = ofi.id_oficina)
+		JOIN plataforma pla
+			ON (ag.id_plataforma = pla.id_plataforma)
+		LEFT JOIN operacion ope
+			ON (ope.id_cliente = cl.id_cliente)
+WHERE cl.marca_baja = false
+GROUP BY cl.id_cliente,
+		cl.cliente_usuario,
+		cl.cliente_password,
+		cl.bloqueado,
+		cl.id_agente,
+		ag.agente_usuario,
+		ag.agente_password,
+		ag.id_plataforma,
+		pla.plataforma,
+		ag.id_oficina,
+		ofi.oficina;
+--select * from v_Clientes order by ult_operacion desc
+
+select * from cliente
+select * from agente
+select * from plataforma
+select * from oficina
 
 select * from cuenta_bancaria
 select * from operacion order by 1 desc
 select * from operacion_retiro order by 1 desc
 select * from operacion_carga order by 1 desc
 select * from accion
-select * from oficina
-update operacion set id_estado = 2 where id_operacion = 23;
+update operacion set id_estado = 2 where id_operacion = 4;
 update oficina set minimo_espera_retiro = 0;
 select * from estado
+
+select * from cliente_sesion
+select * from agente
+select * from v_Agentes where agente_usuario = 'oficina1';
+select * from cliente

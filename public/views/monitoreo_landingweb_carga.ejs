@@ -1,0 +1,77 @@
+<html>
+<head>
+    <h2><%= title %></h2> 
+</head>
+<body>
+    <%if (message === 'ok') {%>
+        <br>
+        <table>
+            <tr>
+                <th>
+                    Cliente: <%= datos[0].cliente_usuario %>        
+                </th>
+                <th>      
+                    Agente: <%= datos[0].agente_usuario %>        
+                </th>
+            </tr>
+            <tr>
+                <th>      
+                    Plataforma: <%= datos[0].plataforma %>        
+                </th>
+                <th>      
+                    Oficina: <%= datos[0].oficina %>        
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    Fecha/Hora: <%= datos[0].fecha_hora_operacion %>        
+                </th>
+                <th>      
+                    Operación: <%= datos[0].codigo_operacion %>        
+                </th>
+            </tr>
+            <tr>
+                <th>      
+                   Titular: <%= datos[0].carga_titular %>        
+                </th>
+                <th>          
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    <label for="monto_importe">Monto Importe:</label>
+                    <input type="number" id="monto_importe" value="<%= datos[0].carga_importe %>">
+                </th>
+                <th> 
+                    <label for="monto_bono">Monto Bono:</label>
+                    <input type="number" id="monto_bono" value="<%= datos[0].carga_bono %>">
+                </th>
+            </tr>
+            <tr>
+                <th colspan = 2>   
+                    <label for="cuenta_bancaria">Cuenta a la que envió:</label><br>
+                    <select id="cuenta_bancaria">
+                        <% datos_cuentas.forEach(function(cuenta) { %>
+                            <option value="<%= cuenta.id_cuenta_bancaria %>" 
+                                <% if (cuenta.id_cuenta_bancaria == datos[0].carga_id_cuenta_bancaria) { %>
+                                    selected
+                                <% } %>
+                                >
+                                <%= cuenta.cuenta_bancaria %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </th>
+            </tr>
+        </table>
+        <h3 class="warning">¡Al realizar esta acción, no habrá opción de Deshacer!</h3>
+        <div id="msgResultado">
+            <button onclick="cargar_Cobro(<%=datos[0].id_operacion %>);">Aceptar Cobro</button>
+            <button onclick="rechazar_Cobro(<%=datos[0].id_operacion %>);">Rechazar Cobro</button>
+        </div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

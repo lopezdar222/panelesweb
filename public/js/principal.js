@@ -19,8 +19,12 @@ let url_ultima_invocada = '';
 let modificando_usuario = 0;
 let registrando_usuario = 0;
 let cargando_cobro = 0;
+let rechazando_cobro = 0;
 let cargando_retiro = 0;
+let rechazando_retiro = 0;
 let anulando_notificacion_cobro = 0;
+let bloqueando_cliente = 0;
+let cargando_cobro_manual = 0;
 const numFilasPorPagina = 10;
 let paginaActual = 1;
 let datos = [];
@@ -103,11 +107,9 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
     let id_rol_par = '';
     let id_usuario_par = '';
     let id_cuenta_bancaria = '';
-    let id_numero_telefono = '';
-    let numero_telefono = '';
-    let id_cliente_usuario = '';
+    let id_operacion = '';
     let id_oficina = '';
-    let id_sesion_cliente_log = '';
+    let id_cliente = '';
     let url = '';
     modal.style.display = 'block';
     switch (opcion)
@@ -125,6 +127,16 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
             id_rol_par = par1;
             id_oficina = par2
             url = `/agentes_nuevo?id_rol=${encodeURIComponent(id_rol_par)}&id_oficina=${encodeURIComponent(id_oficina)}`;
+            cargarContenidoModal(url);
+            break;
+        case 3:
+            id_operacion = par1;
+            id_oficina = par3;
+            if (parseInt(par2, 10) == 1) {
+                url = `/monitoreo_landingweb_carga?id_operacion=${encodeURIComponent(id_operacion)}&id_oficina=${encodeURIComponent(id_oficina)}`;
+            } else {
+                url = `/monitoreo_landingweb_retiro?id_operacion=${encodeURIComponent(id_operacion)}&id_oficina=${encodeURIComponent(id_oficina)}`;
+            }
             cargarContenidoModal(url);
             break;
         case 4:
@@ -176,6 +188,10 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
             url = `/agentes_ayuda`;
             cargarContenidoModal(url);
             break;
+        case 16:
+            url = `/usuarios_clientes_ayuda`;
+            cargarContenidoModal(url);
+            break;
         case 18:
             url = `/monitoreo_landingweb_ayuda`;
             cargarContenidoModal(url);
@@ -196,9 +212,34 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
             url = `/configuracion_oficinias_ayuda`;
             cargarContenidoModal(url);
             break;
+        case 24:
+            id_cliente = par1;
+            url = `/usuarios_clientes_chat?id_cliente=${encodeURIComponent(id_cliente)}`;
+            cargarContenidoModal(url);
+            break;
+        case 25:
+            id_cliente = par1;
+            url = `/usuarios_clientes_carga?id_cliente=${encodeURIComponent(id_cliente)}`;
+            cargarContenidoModal(url);
+            break;
+        case 28:
+            id_cliente = par1;
+            url = `/usuarios_clientes_retiro?id_cliente=${encodeURIComponent(id_cliente)}`;
+            cargarContenidoModal(url);
+            break;
+        case 27:
+            id_cliente = par1;
+            url = `/usuarios_clientes_bloqueo?id_cliente=${encodeURIComponent(id_cliente)}`;
+            cargarContenidoModal(url);
+            break;
         case 26: 
             id_usuario_par = par1;
             url = `/usuarios_historial?id_usuario=${encodeURIComponent(id_usuario_par)}`;
+            cargarContenidoModal(url);
+            break;
+        case 29:
+            id_operacion = par1;
+            url = `/monitoreo_landingweb_detalle?id_operacion=${encodeURIComponent(id_operacion)}`;
             cargarContenidoModal(url);
             break;
         default:
@@ -213,6 +254,33 @@ function cerrarModal() {
     cargarContenido(url_ultima_invocada);
 }
 
+const bloqueo_Cliente = async (id_cliente, bloqueo) => {
+    if (bloqueando_cliente == 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    bloqueando_cliente = 1;
+    const msgResultado = document.getElementById('msgResultado');
+    
+    try {
+        const response = await fetch(`/bloqueo_cliente/${id_usuario}/${id_cliente}/${bloqueo}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        if (response.ok) {
+            const data = await response.json();
+            msgResultado.innerHTML = data.message;
+        } else {
+            msgResultado.innerHTML = 'Error al Bloquear Cliente';
+        }
+        bloqueando_cliente = 0;
+    } catch (error) {
+        bloqueando_cliente = 0;
+        msgResultado.innerHTML = 'Error al Bloquear';
+    }
+};
+
 const modificar_Agente = async (id_agente) => {
     if (modificando_agente=== 1) {
         alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
@@ -225,6 +293,8 @@ const modificar_Agente = async (id_agente) => {
     const comboOficina = document.getElementById('oficina');
     const estado = comboEstado.options[comboEstado.selectedIndex].value;
     const oficina = comboOficina.options[comboOficina.selectedIndex].value;
+    const comboPlataforma = document.getElementById('plataforma');
+    const plataforma = comboPlataforma.options[comboPlataforma.selectedIndex].value;
 
     if (password.value == '') {
         msgResultado.innerHTML = 'Contraseña Vacía!';
@@ -232,7 +302,7 @@ const modificar_Agente = async (id_agente) => {
         return;
     }
     try {
-        const response = await fetch(`/modificar_agente/${id_agente}/${id_usuario}/${password.value}/${estado}/${oficina}`, {
+        const response = await fetch(`/modificar_agente/${id_agente}/${id_usuario}/${password.value}/${estado}/${oficina}/${plataforma}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'}
@@ -261,6 +331,8 @@ const registrar_Agente = async () => {
     const password = document.getElementById('password');
     const comboOficina = document.getElementById('oficina');
     const oficina = comboOficina.options[comboOficina.selectedIndex].value;
+    const comboPlataforma = document.getElementById('plataforma');
+    const plataforma = comboPlataforma.options[comboPlataforma.selectedIndex].value;
 
     if (usuario.value == '') {
         msgResultado.innerHTML = 'Usuario Vacío!';
@@ -273,7 +345,7 @@ const registrar_Agente = async () => {
         return;
     }
     try {
-        const response = await fetch(`/registrar_agente/${id_usuario}/${usuario.value}/${password.value}/${oficina}`, {
+        const response = await fetch(`/registrar_agente/${id_usuario}/${usuario.value}/${password.value}/${oficina}/${plataforma}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'}
@@ -282,12 +354,12 @@ const registrar_Agente = async () => {
             const data = await response.json();
             msgResultado.innerHTML = data.message;
         } else {
-            msgResultado.innerHTML = 'Error al Registrar Agente';
+            msgResultado.innerHTML = data.message;
         }
         registrando_agente = 0;
     } catch (error) {
         registrando_agente = 0;
-        msgResultado.innerHTML = 'Error al Registrar Agente';
+        msgResultado.innerHTML = 'Error al Registrar Agente (Cliente)';
     }
 };
 
@@ -497,82 +569,80 @@ const nueva_Oficina = async () => {
     //console.log(estado);
     //console.log(id_usuario);
     //console.log('Crea Ofi 3');
-
-
     if (oficina.value == '') {
         msgResultado.innerHTML = 'Oficina Vacía!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (contactoWhatsapp.value == '') {
         msgResultado.innerHTML = 'Contacto Whatsapp Vacío!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (contactoTelegram.value == '') {
         msgResultado.innerHTML = 'Contacto Telegram Vacío!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     contactoTelegram.value = contactoTelegram.value.replace('/','<<');
     if (bonoPrimeraCarga.value == '') {
         msgResultado.innerHTML = 'Porcentaje Bono Primero Carga Vacío!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (bonoCargaPerpetua.value == '') {
         msgResultado.innerHTML = 'Porcentaje Bono Perpetuo Vacío!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (minimoCarga.value == '') {
         msgResultado.innerHTML = 'Mínimo de Carga Vacío!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (minimoRetiro.value == '') {
         msgResultado.innerHTML = 'Mínimo de Retiro Vacío!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (minimoEsperaRetiro.value == '') {
         msgResultado.innerHTML = 'Espera de Retiro Vacío!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (parseInt(bonoPrimeraCarga.value, 10) < 0){
         msgResultado.innerHTML = 'No puede ser menor a cero!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (parseInt(bonoCargaPerpetua.value, 10) < 0){
         msgResultado.innerHTML = 'No puede ser menor a cero!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (parseInt(minimoCarga.value, 10) < 0){
         msgResultado.innerHTML = 'No puede ser menor a cero!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (parseInt(minimoRetiro.value, 10) < 0){
         msgResultado.innerHTML = 'No puede ser menor a cero!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     if (parseInt(minimoEsperaRetiro.value, 10) < 0){
         msgResultado.innerHTML = 'No puede ser menor a cero!';
-        modificando_oficina = 0;
+        creando_oficina = 0;
         return;
     }
     
     try {
-        const response = await fetch(`/crear_oficina/${id_usuario}/${oficina.value}/${contactoWhatsapp.value}/${contactoTelegram.value}/${estado}/${bonoPrimeraCarga.value}/${bonoRecupero.value}/${bonoCargaPerpetua.value}/${minimoCarga.value}/${minimoRetiro.value}/${minimoEsperaRetiro.value}`, {
+        const response = await fetch(`/crear_oficina/${id_usuario}/${oficina.value}/${contactoWhatsapp.value}/${contactoTelegram.value}/${estado}/${bonoPrimeraCarga.value}/${bonoCargaPerpetua.value}/${minimoCarga.value}/${minimoRetiro.value}/${minimoEsperaRetiro.value}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'}
         });
-        //console.log('Crea Ofi 3');
+        //console.log('Crea Ofi');
         const data = await response.json();
         msgResultado.innerHTML = data.message;
         creando_oficina = 0;
@@ -692,6 +762,178 @@ const crear_Cuenta_Cobro = async (id_oficina) => {
     }
 };
 
+const cargar_Retiro = async (id_operacion) => {
+    if (cargando_retiro === 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    cargando_retiro = 1;
+    const msgResultado = document.getElementById('msgResultado');
+    const btnRechazar = document.getElementById('btnRechazar');
+    const monto_retiro = document.getElementById('monto_retiro');
+
+    if (monto_retiro.value == '') {
+        msgResultado.innerHTML = 'Importe Vacío!';
+        cargando_retiro = 0;
+        return;
+    }
+    try {
+        const response = await fetch(`/cargar_retiro/${id_operacion}/${id_usuario}/${monto_retiro.value}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        const data = await response.json();
+        msgResultado.innerHTML = data.message;
+        if (data.message != 'Saldo Insuficiente!') {
+            btnRechazar.innerHTML = '';
+        }
+        cargando_retiro = 0;
+    } catch (error) {
+        cargando_retiro = 0;
+        msgResultado.innerHTML = 'Error al Cargar Cobro';
+    }
+};
+
+const cargar_Cobro_Manual = async (id_cliente) => {
+    if (cargando_cobro_manual === 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    cargando_cobro_manual = 1;
+    const msgResultado = document.getElementById('msgResultado');
+    const monto_importe = document.getElementById('monto');
+    const monto_bono = document.getElementById('bono');
+    const titular = document.getElementById('titular');
+    const observacion = document.getElementById('observacion');
+    const comboCuenta = document.getElementById('cuentaBancaria');
+    const id_cuenta_bancaria = comboCuenta.options[comboCuenta.selectedIndex].value;
+
+    if (monto_importe.value == '') {
+        msgResultado.innerHTML = 'Importe Vacío!';
+        cargando_cobro_manual = 0;
+        return;
+    }
+    if (Number(monto_importe.value) == 0) {
+        msgResultado.innerHTML = 'El Importe debe ser mayor a Cero!';
+        cargando_cobro_manual = 0;
+        return;
+    }
+    if (monto_bono.value == '') {
+        msgResultado.innerHTML = 'Bono Vacío!';
+        cargando_cobro_manual = 0;
+        return;
+    }
+    if (titular.value == '') {
+        msgResultado.innerHTML = 'Titular Vacío!';
+        cargando_cobro_manual = 0;
+        return;
+    }
+    if (observacion.value == '') {
+        observacion.value = '-';
+    }
+    observacion.value = observacion.value.replace('/','<<');
+    titular.value = titular.value.replace('/','<<');
+    try {
+        const response = await fetch(`/cargar_cobro_manual/${id_cliente}/${id_usuario}/${monto_importe.value}/${monto_bono.value}/${titular.value}/${id_cuenta_bancaria}/${observacion.value}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        const data = await response.json();
+        msgResultado.innerHTML = data.message;
+        cargando_cobro_manual = 0;
+    } catch (error) {
+        cargando_cobro_manual = 0;
+        msgResultado.innerHTML = 'Error al Cargar Cobro Manual';
+    }
+};
+
+const cargar_Cobro = async (id_operacion) => {
+    if (cargando_cobro === 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    cargando_cobro = 1;
+    const msgResultado = document.getElementById('msgResultado');
+    const monto_importe = document.getElementById('monto_importe');
+    const monto_bono = document.getElementById('monto_bono');
+    const comboCuenta = document.getElementById('cuenta_bancaria');
+    const id_cuenta_bancaria = comboCuenta.options[comboCuenta.selectedIndex].value;
+
+    if (monto_importe.value == '') {
+        msgResultado.innerHTML = 'Importe Vacío!';
+        cargando_cobro = 0;
+        return;
+    }
+    if (monto_bono.value == '') {
+        msgResultado.innerHTML = 'Bono Vacío!';
+        cargando_cobro = 0;
+        return;
+    }
+    try {
+        const response = await fetch(`/cargar_cobro/${id_operacion}/${id_usuario}/${monto_importe.value}/${monto_bono.value}/${id_cuenta_bancaria}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        const data = await response.json();
+        msgResultado.innerHTML = data.message;
+        cargando_cobro = 0;
+    } catch (error) {
+        cargando_cobro = 0;
+        msgResultado.innerHTML = 'Error al Cargar Cobro';
+    }
+};
+
+const rechazar_Retiro = async (id_operacion) => {
+    if (rechazando_retiro === 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    rechazando_retiro = 1;
+    const msgResultado = document.getElementById('msgResultado');
+    const btnRechazar = document.getElementById('btnRechazar');
+
+    try {
+        const response = await fetch(`/rechazar_retiro/${id_operacion}/${id_usuario}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        const data = await response.json();
+        msgResultado.innerHTML = data.message;
+        btnRechazar.innerHTML = '';
+        rechazando_retiro = 0;
+    } catch (error) {
+        rechazando_retiro = 0;
+        msgResultado.innerHTML = 'Error al Rechazar Retiro';
+    }
+};
+
+const rechazar_Cobro = async (id_operacion) => {
+    if (rechazando_cobro === 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    rechazando_cobro = 1;
+    const msgResultado = document.getElementById('msgResultado');
+
+    try {
+        const response = await fetch(`/rechazar_cobro/${id_operacion}/${id_usuario}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        const data = await response.json();
+        msgResultado.innerHTML = data.message;
+        rechazando_cobro = 0;
+    } catch (error) {
+        rechazando_cobro = 0;
+        msgResultado.innerHTML = 'Error al Rechazar Cobro';
+    }
+};
+
 document.addEventListener('DOMContentLoaded', async (req, res) => {
     // Obtener los parámetros de la URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -723,6 +965,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             const menu05 = document.getElementById('menu05');
             const menu06 = document.getElementById('menu06');
             const menu07 = document.getElementById('menu07');
+            const menu08 = document.getElementById('menu08');
             //const indicador01 = document.getElementById('indicador01');
             //const indicador02 = document.getElementById('indicador02');
             const logout = document.getElementById('logout');
@@ -751,6 +994,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             const enlace_menu05 = document.getElementById('menu05');
             const enlace_menu06 = document.getElementById('menu06');
             const enlace_menu07 = document.getElementById('menu07');
+            const enlace_menu08 = document.getElementById('menu08');
             
             enlace_menu01.addEventListener('click', function(event) {
                 event.preventDefault();
@@ -793,6 +1037,12 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                 url_ultima_invocada = `${this.getAttribute('href')}?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
                 cargarContenido(url_ultima_invocada);
             });
+            
+            enlace_menu08.addEventListener('click', function(event) {
+                event.preventDefault();
+                url_ultima_invocada = `${this.getAttribute('href')}?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
+                cargarContenido(url_ultima_invocada);
+            });
 
             // Obtén el modal y el botón para cerrar el modal
             const spanCerrarModal = document.getElementById('btn_cerrar_modal');
@@ -818,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             });
 
             // Carga el menú de actividad de clientes al inicio:
-            url_ultima_invocada = `/cuentas_cobro?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
+            url_ultima_invocada = `/monitoreo_landingweb?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
             cargarContenido(url_ultima_invocada);
         }       
 

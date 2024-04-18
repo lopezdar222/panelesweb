@@ -9,6 +9,7 @@
                         <label for="oficina">Oficina:</label><br>
                         <select id="oficina">
                             <% datos_oficina.forEach(function(ofi) { %>
+
                                 <option value="<%= ofi.id_oficina %>" 
                                         <% if (ofi.id_oficina == datos[0].id_oficina) { %>
                                             selected
@@ -16,12 +17,24 @@
                                         >
                                     <%= ofi.oficina %>
                                 </option>
+
                             <% }); %>
                         </select>
                     </th>
                 </th>
-                <th>
-                    <label>Plataforma: <%= datos[0].plataforma %></label>
+                <th> 
+                    <label for="plataforma">Plataforma:</label><br>
+                    <select id="plataforma">
+                        <% datos_plataforma.forEach(function(plataforma) { %>
+                            <option value="<%= plataforma.id_plataforma %>" 
+                                <% if (plataforma.id_plataforma == datos[0].id_plataforma) { %>
+                                    selected
+                                <% } %>
+                                >
+                                <%= plataforma.plataforma %>
+                            </option>
+                        <% }); %>
+                    </select>
                 </th>
             </tr>
             <tr>

@@ -1,0 +1,89 @@
+<html>
+<head>
+    <h2><%= title %></h2> 
+</head>
+<body>
+    <%if (message === 'ok') {%>
+        <br>
+        <table>
+            <tr>
+                <th>
+                    Cliente: <%= datos[0].cliente_usuario %>        
+                </th>
+                <th>      
+                    Agente: <%= datos[0].agente_usuario %>        
+                </th>
+            </tr>
+            <tr>
+                <th>      
+                    Plataforma: <%= datos[0].plataforma %>        
+                </th>
+                <th>      
+                    Oficina: <%= datos[0].oficina %>        
+                </th>
+            </tr>
+            <tr>
+                <th>      
+                    Acción: <%= datos[0].accion %>        
+                </th>
+                <th>      
+                    Usuario: <%= datos[0].usuario %>        
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    Fecha/Hora: <%= datos[0].fecha_hora_operacion %>        
+                </th>
+                <th>      
+                    Operación: <%= datos[0].codigo_operacion %>    
+                </th>
+            </tr>
+            <%if (datos[0].id_accion == 5) {%>
+                <tr>
+                    <th>      
+                        Importe: <%= datos[0].carga_importe %>        
+                    </th>
+                    <th>      
+                        Bono: <%= datos[0].carga_bono %>        
+                    </th>
+                </tr>
+                <tr>
+                    <th>      
+                        Titular: <%= datos[0].carga_titular %>        
+                    </th>
+                    <th>      
+                        Cuenta: <%= datos[0].carga_cuenta_bancaria %>        
+                    </th>
+                </tr>
+                <tr>
+                    <th>      
+                        Observaciones: <%= datos[0].carga_observaciones %>        
+                    </th>
+                    <th>      
+                    </th>
+                </tr>
+            <%} else if (datos[0].id_accion == 6) {%>
+                <tr>
+                    <th>      
+                        Importe: <%= datos[0].retiro_importe %>        
+                    </th>
+                    <th>  
+                        CBU: <%= datos[0].retiro_cbu %>   
+                    </th>
+                </tr>
+                <tr>
+                    <th>      
+                        Titular: <%= datos[0].retiro_titular %>        
+                    </th>
+                    <th>      
+                        Observaciones: <%= datos[0].retiro_observaciones %>        
+                    </th>
+                </tr>
+            <%} %>
+        </table>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

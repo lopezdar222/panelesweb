@@ -1,0 +1,43 @@
+<html>
+    <head>
+        <h1><%= title %></h1>
+    </head>
+    <body>
+        <%if (message === 'ok') {%>
+            <br>
+            <label for="textoMensaje"><h3>Escribir Mensaje:</h3></label>
+            <input type="text" id="textoMensaje" value="">
+            <button onclick="mensaje_Usuario_Cliente(<%= id_operador %>, <%= id_cliente_usuario %>, <%= id_usuario %>);">Enviar</button>
+            <div id="msgResultado"></div>
+            <br>
+            <table width="100%">
+                <thead>
+                    <tr>
+                        <th>Bot</th>
+                        <th>Fecha/Hora</th>
+                        <th>Mensaje Cliente</th>
+                        <th>Mensaje Operador</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% datos_usuario.forEach(function(dato) { %>
+                        <tr>
+                            <td><%= dato.numero_telefono %></td>
+                            <td><%= dato.fecha_hora %></td>
+                            <% if (dato.desde_usuario == true) { %>
+                                <td><%= dato.mensaje %></td>
+                                <td></td>
+                            <% } else { %>
+                                <td></td>
+                                <td><%= dato.mensaje %> (<%= dato.usuario %>)</td>
+                            <% } %>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        <%} else {%>
+            <h3><%= message %></h3>
+        <%} %>
+        <button onclick="cerrarModal();">Finalizar</button>
+    </body>
+</html>

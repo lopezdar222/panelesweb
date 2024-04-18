@@ -1,13 +1,13 @@
 const axios = require('axios');
 
-async function retirar(nombre, monto, variables_utiles) {
+async function retirar(nombre, monto, agent_user, agent_pass) {
     try {
         const url = `https://wallet-uat.emaraplay.com/bot/user/withdraw`;
         // Datos que deseas enviar en la petición POST
         const data = {
             agent : {
-                username : variables_utiles.ADMIN,
-                password : variables_utiles.ADMIN_PASS
+                username : agent_user,
+                password : agent_pass
             },
             user : {
                 username : nombre

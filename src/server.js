@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 const db = require(__dirname + '/db');
 const ejs = require('ejs');
 const axios = require('axios');
+const { Console } = require('console');
 ///////////////////////////////////////////////////////////////////////////////
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -86,6 +87,109 @@ app.get('/reportes', async (req, res) => {
     }
 });
 
+app.get('/usuarios_clientes', async (req, res) => {
+    // Obtener los parámetros de la URL
+    const id_usuario = parseInt(req.query.id_usuario, 10);
+    const id_token = req.query.id_token;
+    // const id_rol = parseInt(req.query.id_rol, 10);
+    try {
+        const query = `select * from Obtener_Usuario_Token(${id_usuario},'${id_token}')`;
+        const result = await db.handlerSQL(query);
+        if (result.rows.length == 0) {
+            res.render('agentes', { message: 'error de sesión', title: 'Agentes'});
+            return;
+        }
+        const id_oficina = result.rows[0].id_oficina;
+        let query2 = `select    id_cliente,` +
+                                `cliente_usuario,` +
+                                `cliente_password,` +
+                                `bloqueado,` +
+                                `id_agente,` +
+                                `agente_usuario, ` +
+                                `id_plataforma,` +
+                                `plataforma, ` +
+                                `id_oficina,` +
+                                `oficina ` +
+                        `from v_Clientes`;
+        if (result.rows[0].id_rol > 1) {
+            query2 = query2 + ` where id_oficina = ${id_oficina}`;
+        }
+        query2 = query2 + ` order by ult_operacion desc`;
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('usuarios_clientes', { message: 'No hay Clientes', title: 'Clientes'});
+            return;
+        }
+        const datos = result2.rows;
+        res.render('usuarios_clientes', { message: 'ok', title: 'Clientes', datos: datos});
+    }
+    catch (error) {
+        res.render('usuarios_clientes', { message: 'error', title: 'Clientes'});
+    }
+});
+
+app.get('/usuarios_clientes_bloqueo', async (req, res) => {
+    try 
+    {
+        // Obtener los parámetros de la URL
+        const id_cliente = parseInt(req.query.id_cliente, 10);
+        const query2 = `select id_cliente,` +
+                                `bloqueado ` +
+                        `from v_Clientes where id_cliente = ${id_cliente}`;
+        
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('usuarios_clientes_bloqueo', { message: 'error', title : 'Cliente No encontrado', title: 'Bloqueo de Clientes'});
+            return;
+        }
+        const bloqueado = result2.rows[0].bloqueado;
+        //console.log(datos);
+        res.render('usuarios_clientes_bloqueo', { message: 'ok', title: 'Bloqueo de Clientes', id_cliente : id_cliente, bloqueado : bloqueado });
+    }
+    catch (error) {
+        res.render('usuarios_clientes_bloqueo', { message: 'error', title: 'Bloqueo de Clientes'});
+    }
+});
+
+app.get('/usuarios_clientes_carga', async (req, res) => {
+    try 
+    {
+        // Obtener los parámetros de la URL
+        const id_cliente = parseInt(req.query.id_cliente, 10);
+        const query2 = `select id_cliente,` +
+                                `cliente_usuario,` +
+                                `agente_usuario, ` +
+                                `plataforma, ` +
+                                `id_oficina, ` +
+                                `oficina ` +
+                        `from v_Clientes where id_cliente = ${id_cliente}`;
+        
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('usuarios_clientes_carga', { message: 'Cliente No encontrado', title: 'Carga de Fichas'});
+            return;
+        }
+        const datos = result2.rows[0];
+        
+        const query3 = `select id_cuenta_bancaria, ` +
+                                `nombre || ' - ' || alias || ' - ' || cbu as cuenta_bancaria ` +
+                        `from v_Cuentas_Bancarias where id_oficina = ${datos.id_oficina} and marca_baja = false`;
+        const result3 = await db.handlerSQL(query3);
+
+        if (result3.rows.length == 0) {
+            res.render('usuarios_clientes_carga', { message: 'error', title: 'No Hay Cuentas Bancarias Disponibles!'});
+            return;
+        }
+        const datos_cuentas = result3.rows;
+
+        //console.log(datos);
+        res.render('usuarios_clientes_carga', { message: 'ok', title: 'Carga de Fichas', datos : datos, datos_cuentas : datos_cuentas });
+    }
+    catch (error) {
+        res.render('usuarios_clientes_carga', { message: 'error', title: 'Carga de Fichas'});
+    }
+});
+
 app.get('/agentes', async (req, res) => {
     // Obtener los parámetros de la URL
     const id_usuario = parseInt(req.query.id_usuario, 10);
@@ -104,7 +208,7 @@ app.get('/agentes', async (req, res) => {
                                 `agente_password,` +
                                 `id_plataforma,` +
                                 `plataforma,` +
-                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24') as fecha_hora_creacion,` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
                                 `marca_baja,` +
                                 `id_oficina,` +
                                 `oficina ` +
@@ -130,57 +234,67 @@ app.get('/agentes', async (req, res) => {
 });
 
 app.get('/agentes_editar', async (req, res) => {
-    // Obtener los parámetros de la URL
-    const id_agente = parseInt(req.query.id_agente, 10);
-    const id_rol = parseInt(req.query.id_rol, 10);
-    let query2 = `select    id_agente,` +
-                            `agente_usuario,` +
-                            `agente_password,` +
-                            `id_plataforma,` +
-                            `plataforma,` +
-                            `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24') as fecha_hora_creacion,` +
-                            `marca_baja,` +
-                            `id_oficina,` +
-                            `oficina ` +
-                    `from v_Agentes where id_agente = ${id_agente}`;
-    
-    const result2 = await db.handlerSQL(query2);
-    if (result2.rows.length == 0) {
-        res.render('agentes_editar', { message: 'Agente No encontrado', title: 'Edición de Agente', id_rol : id_rol});
-        return;
-    }
-
-    //const datos = result2.rows;
-    const datos = [
-        {   id_agente: result2.rows[0].id_agente,
-            agente_usuario: result2.rows[0].agente_usuario, 
-            agente_password: result2.rows[0].agente_password,
-            fecha_hora_creacion : result2.rows[0].fecha_hora_creacion,
-            marca_baja : result2.rows[0].marca_baja, 
-            id_plataforma : result2.rows[0].id_plataforma,
-            plataforma : result2.rows[0].plataforma,
-            id_oficina : result2.rows[0].id_oficina,
-            oficina : result2.rows[0].oficina}
-    ];
-    
-    let query3 = '';
-    let result3 = '';
-    let datos_oficina = '';
-
-    if (id_rol == 1)
+    try
     {
-        query3 = `select id_oficina, oficina from v_Oficinas where marca_baja = false`;
-        result3 = await db.handlerSQL(query3);
-        datos_oficina = result3.rows;
-    } else {
-        datos_oficina = [
-            {   id_oficina : result2.rows[0].id_oficina,
+        // Obtener los parámetros de la URL
+        const id_agente = parseInt(req.query.id_agente, 10);
+        const id_rol = parseInt(req.query.id_rol, 10);
+        let query2 = `select    id_agente,` +
+                                `agente_usuario,` +
+                                `agente_password,` +
+                                `id_plataforma,` +
+                                `plataforma,` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
+                                `marca_baja,` +
+                                `id_oficina,` +
+                                `oficina ` +
+                        `from v_Agentes where id_agente = ${id_agente}`;
+        
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('agentes_editar', { message: 'Agente No encontrado', title: 'Edición de Agente', id_rol : id_rol});
+            return;
+        }
+
+        //const datos = result2.rows;
+        const datos = [
+            {   id_agente: result2.rows[0].id_agente,
+                agente_usuario: result2.rows[0].agente_usuario, 
+                agente_password: result2.rows[0].agente_password,
+                fecha_hora_creacion : result2.rows[0].fecha_hora_creacion,
+                marca_baja : result2.rows[0].marca_baja, 
+                id_plataforma : result2.rows[0].id_plataforma,
+                plataforma : result2.rows[0].plataforma,
+                id_oficina : result2.rows[0].id_oficina,
                 oficina : result2.rows[0].oficina}
         ];
-    }
+        
+        let query3 = '';
+        let result3 = '';
+        let datos_oficina = '';
 
-    //console.log(datos);
-    res.render('agentes_editar', { message: 'ok', title: 'Edición de Agente', datos: datos, datos_oficina : datos_oficina, id_rol : id_rol });
+        if (id_rol == 1)
+        {
+            query3 = `select id_oficina, oficina from v_Oficinas where marca_baja = false`;
+            result3 = await db.handlerSQL(query3);
+            datos_oficina = result3.rows;
+        } else {
+            datos_oficina = [
+                {   id_oficina : result2.rows[0].id_oficina,
+                    oficina : result2.rows[0].oficina}
+            ];
+        }
+
+        const query4 = `select id_plataforma, plataforma from v_Plataformas where marca_baja = false`;
+        const result4 = await db.handlerSQL(query4);
+        const datos_plataforma = result4.rows;
+
+        //console.log(datos);
+        res.render('agentes_editar', { message: 'ok', title: 'Edición de Agente', datos: datos, datos_oficina : datos_oficina, id_rol : id_rol, datos_plataforma : datos_plataforma });
+    }
+    catch (error) {
+        res.render('agentes_editar', { message: 'error', title: 'Edición de Agente'});
+    }
 });
 
 app.get('/agentes_nuevo', async (req, res) => {
@@ -202,7 +316,12 @@ app.get('/agentes_nuevo', async (req, res) => {
             datos_oficina = result3.rows;
         }
 
-        res.render('agentes_nuevo', { message: 'ok', title: 'Creación de Agente', datos_oficina : datos_oficina });
+        const query4 = `select id_plataforma, plataforma from v_Plataformas where marca_baja = false`;
+        const result4 = await db.handlerSQL(query4);
+        const datos_plataforma = result4.rows;
+
+
+        res.render('agentes_nuevo', { message: 'ok', title: 'Creación de Agente', datos_oficina : datos_oficina, datos_plataforma : datos_plataforma });
     }
     catch (error) {
         res.render('agentes_nuevo', { message: 'error', title: 'Creación de Agente'});
@@ -224,7 +343,7 @@ app.get('/usuarios', async (req, res) => {
         const id_oficina = result.rows[0].id_oficina;
         let query2 = `select    id_usuario,` +
                                 `usuario,` +
-                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24') as fecha_hora_creacion,` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
                                 `marca_baja,` +
                                 `id_rol,` +
                                 `nombre_rol,` +
@@ -258,7 +377,7 @@ app.get('/usuarios_editar', async (req, res) => {
     //console.log(`select * from v_Sesion_Bot where orden = 1 and id_operador = ${id_operador};`);
     let query2 = `select    id_usuario,` +
                             `usuario,` +
-                            `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24') as fecha_hora_creacion,` +
+                            `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
                             `marca_baja,` +
                             `id_rol,` +
                             `nombre_rol,` +
@@ -369,7 +488,7 @@ app.get('/configuracion_oficinas', async (req, res) => {
                                 `minimo_carga,` +
                                 `minimo_retiro,` +
                                 `minimo_espera_retiro,` +
-                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24') as fecha_hora_creacion,` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
                                 `marca_baja ` +
                         `from v_Oficinas`;
         if (result.rows[0].id_rol > 1) {
@@ -404,7 +523,7 @@ app.get('/configuracion_oficinas_editar', async (req, res) => {
                             `minimo_carga,` +
                             `minimo_retiro,` +
                             `minimo_espera_retiro,` +
-                            `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24') as fecha_hora_creacion,` +
+                            `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
                             `marca_baja ` +
                     `from v_Oficinas where id_oficina = ${id_oficina}`;
     //const query = `select * from Obtener_Usuario('${username}')`;
@@ -444,7 +563,7 @@ app.get('/cuentas_cobro', async (req, res) => {
                                 `nombre,` +
                                 `alias,` +
                                 `cbu,` +
-                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MM') as fecha_hora_creacion,` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
                                 `marca_baja ` +
                         `from v_Cuentas_Bancarias`;
         if (id_rol > 1) {
@@ -520,10 +639,9 @@ app.get('/cuentas_cobro_descargas_historial', async (req, res) => {
         let query3 = `select    nombre,` +
                                 `alias,` +
                                 `cbu,` +
-                                `nombre_aplicacion,` +
                                 `id_usuario,` +
                                 `usuario,` +
-                                `TO_CHAR(fecha_hora_descarga, 'DD/MM/YYYY HH24') as fecha_hora_descarga,` +
+                                `TO_CHAR(fecha_hora_descarga, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_descarga,` +
                                 `cargas_monto,` +
                                 `cargas_cantidad ` +
                         `from v_Cuentas_Bancarias_Descargas Where id_cuenta_bancaria = ${id_cuenta_bancaria} ` +
@@ -574,7 +692,7 @@ app.get('/cuentas_cobro_editar', async (req, res) => {
                                 `nombre,` +
                                 `alias,` +
                                 `cbu,` +
-                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MM') as fecha_hora_creacion,` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
                                 `marca_baja ` +
                         `from v_Cuentas_Bancarias where id_cuenta_bancaria = ${id_cuenta}`;
         const result2 = await db.handlerSQL(query2);
@@ -591,12 +709,92 @@ app.get('/cuentas_cobro_editar', async (req, res) => {
     }
 });
 
+app.get('/monitoreo_landingweb_retiro', async (req, res) => {
+    // Obtener los parámetros de la URL
+    const id_operacion = parseInt(req.query.id_operacion, 10);
+    const id_oficina = parseInt(req.query.id_oficina, 10);
+    try {
+        const query = `select    id_cliente,` +
+                                `cliente_usuario,` +
+                                `id_agente,` +
+                                `agente_usuario,` +
+                                `id_plataforma,` +
+                                `plataforma,` +
+                                `id_oficina,` +
+                                `oficina,` +
+                                `id_operacion,` +
+                                `codigo_operacion,` +
+                                `id_estado,` +
+                                `estado,` +
+                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_operacion,` +
+                                `retiro_importe,` +
+                                `retiro_titular, ` +
+                                `retiro_cbu ` +
+        `from v_Clientes_Operaciones where id_operacion = ${id_operacion}`;
+        
+        const result = await db.handlerSQL(query);
+        if (result.rows.length === 0) {
+            res.render('monitoreo_landingweb_retiro', { message: 'Operacion no encontrada', title: 'Verificación de Retiro'});
+            return;
+        }
+        const datos = result.rows;
+
+        res.render('monitoreo_landingweb_retiro', { message: 'ok', title: 'Verificación de Retiro', datos: datos });
+    }
+    catch (error) {
+        res.render('monitoreo_landingweb_retiro', { message: 'error', title: 'Verificación de Retiro'});
+    }
+});
+
+app.get('/monitoreo_landingweb_carga', async (req, res) => {
+    // Obtener los parámetros de la URL
+    const id_operacion = parseInt(req.query.id_operacion, 10);
+    const id_oficina = parseInt(req.query.id_oficina, 10);
+    try {
+        const query = `select    id_cliente,` +
+                                `cliente_usuario,` +
+                                `id_agente,` +
+                                `agente_usuario,` +
+                                `id_plataforma,` +
+                                `plataforma,` +
+                                `id_oficina,` +
+                                `oficina,` +
+                                `id_operacion,` +
+                                `codigo_operacion,` +
+                                `id_estado,` +
+                                `estado,` +
+                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_operacion,` +
+                                `carga_importe,` +
+                                `carga_bono, ` +
+                                `carga_titular, ` +
+                                `carga_id_cuenta_bancaria ` +
+        `from v_Clientes_Operaciones where id_operacion = ${id_operacion}`;
+        
+        const result = await db.handlerSQL(query);
+        if (result.rows.length === 0) {
+            res.render('monitoreo_landingweb_carga', { message: 'Operacion no encontrada', title: 'Verificación de Carga'});
+            return;
+        }
+        const datos = result.rows;
+
+        const query2 = `select   id_cuenta_bancaria,` +
+                                `nombre || ' - ' || alias || ' - ' || cbu as cuenta_bancaria ` +
+        `from v_Cuentas_Bancarias where marca_baja = false and id_oficina = ${id_oficina}`;
+        const result2 = await db.handlerSQL(query2);
+        const datos_cuentas = result2.rows;
+
+        res.render('monitoreo_landingweb_carga', { message: 'ok', title: 'Verificación de Carga', datos: datos, datos_cuentas : datos_cuentas });
+    }
+    catch (error) {
+        res.render('monitoreo_landingweb_carga', { message: 'error', title: 'Verificación de Carga'});
+    }
+});
+
 app.get('/monitoreo_landingweb', async (req, res) => {
     // Obtener los parámetros de la URL
     const id_usuario = parseInt(req.query.id_usuario, 10);
     const id_token = req.query.id_token;
     const id_rol = parseInt(req.query.id_rol, 10);
-    //console.log('Cuentas Cobro');
     try {
         const query = `select * from Obtener_Usuario_Token(${id_usuario},'${id_token}')`;
         //console.log('Paso 1');
@@ -607,19 +805,30 @@ app.get('/monitoreo_landingweb', async (req, res) => {
             return;
         }
         const id_oficina = result.rows[0].id_oficina;
-        let query2 = `select    id_cuenta_bancaria,` +
+        let query2 = `select    id_cliente,` +
+                                `cliente_usuario,` +
+                                `id_agente,` +
+                                `agente_usuario,` +
+                                `id_plataforma,` +
+                                `plataforma,` +
                                 `id_oficina,` +
                                 `oficina,` +
-                                `nombre,` +
-                                `alias,` +
-                                `cbu,` +
-                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MM') as fecha_hora_creacion,` +
-                                `marca_baja ` +
-                        `from v_Cuentas_Bancarias`;
+                                `id_operacion,` +
+                                `codigo_operacion,` +
+                                `id_estado,` +
+                                `estado,` +
+                                `id_accion,` +
+                                `accion,` +
+                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_operacion,` +
+                                `TO_CHAR(fecha_hora_proceso, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_proceso,` +
+                                `retiro_importe,` +
+                                `carga_importe,` +
+                                `carga_bono ` +
+                        `from v_Clientes_Operaciones where marca_baja = false`;
         if (id_rol > 1) {
-            query2 = query2 + ` where id_oficina = 0 and id_oficina = ${id_oficina}`;
+            query2 = query2 + ` and id_oficina = ${id_oficina}`;
         }
-        query2 = query2 + ` order by marca_baja, nombre, alias, cbu`;
+        query2 = query2 + ` order by id_operacion desc`;
         //console.log('Paso 2');
         //console.log(query2);
         const result2 = await db.handlerSQL(query2);
@@ -629,6 +838,7 @@ app.get('/monitoreo_landingweb', async (req, res) => {
         }
         const datos = result2.rows;
 
+        //console.log('Paso 3');
         res.render('monitoreo_landingweb', { message: 'ok', title: 'Monitoreo LandingWeb', id_oficina : id_oficina, datos : datos });
     }
     catch (error) {
@@ -636,11 +846,122 @@ app.get('/monitoreo_landingweb', async (req, res) => {
     }
 });
 
-// Páginas Generales
-app.post('/modificar_agente/:id_agente/:id_usuario/:password/:estado/:oficina', async (req, res) => {
-    const { id_agente, id_usuario, password, estado, oficina } = req.params;
+app.get('/monitoreo_landingweb_detalle', async (req, res) => {
     try {
-        const query = `select Modificar_Agente(${id_agente}, ${id_usuario}, '${password}', ${estado}, ${oficina})`;
+        // Obtener los parámetros de la URL
+        const id_operacion = parseInt(req.query.id_operacion, 10);
+        const query = `select    id_cliente,` +
+                                `cliente_usuario,` +
+                                `id_agente,` +
+                                `agente_usuario,` +
+                                `id_plataforma,` +
+                                `plataforma,` +
+                                `id_oficina,` +
+                                `oficina,` +
+                                `id_operacion,` +
+                                `codigo_operacion,` +
+                                `id_estado,` +
+                                `estado,` +
+                                `id_accion,` +
+                                `accion,` +
+                                `usuario,` +
+                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_operacion,` +
+                                `TO_CHAR(fecha_hora_proceso, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_proceso,` +
+                                `retiro_importe,` +
+                                `retiro_cbu, ` +
+                                `retiro_titular, ` +
+                                `retiro_observaciones, ` +
+                                `carga_importe,` +
+                                `carga_bono, ` +
+                                `carga_titular, ` +
+                                `carga_cuenta_bancaria, ` +
+                                `carga_observaciones ` +
+                        `from v_Clientes_Operaciones where id_operacion = ${id_operacion}`;
+        //console.log('Paso 2');
+        //console.log(query2);
+        const result = await db.handlerSQL(query);
+        if (result.rows.length == 0) {
+            res.render('monitoreo_landingweb_detalle', { message: 'No hay Detalle', title: 'Operacion Detalle'});
+            return;
+        }
+        const datos = result.rows;
+
+        //console.log('Paso 3');
+        res.render('monitoreo_landingweb_detalle', { message: 'ok', title: 'Operacion Detalle', datos : datos });
+    }
+    catch (error) {
+        res.render('monitoreo_landingweb_detalle', { message: 'error', title: 'Operacion Detalle'});
+    }
+});
+
+// Páginas Generales
+app.post('/cargar_cobro_manual/:id_cliente/:id_usuario/:monto_importe/:monto_bono/:titular/:id_cuenta_bancaria/:observacion', async (req, res) => {
+    try {
+        let { id_cliente, id_usuario, monto_importe, monto_bono, titular, id_cuenta_bancaria, observacion } = req.params;
+        observacion = observacion.replace('<<','/');
+        titular = titular.replace('<<','/');
+        const query = `select    id_cliente,` +
+                                `cliente_usuario,` +
+                                `agente_usuario,` +
+                                `agente_password,` +
+                                `id_plataforma ` +
+                        `from v_Clientes where id_cliente = ${id_cliente}`;
+        const result = await db.handlerSQL(query);
+
+        const cliente_usuario = result.rows[0].cliente_usuario;
+        const agente_nombre = result.rows[0].agente_usuario;
+        const agente_password = result.rows[0].agente_password;
+        const monto_total = Number(monto_importe) + Number(monto_bono);
+
+        let resultado = '';
+        if (result.rows[0].id_plataforma == 1) {
+            const carga_manual3 = require('./scrap_bot3/cargar.js');
+            resultado = await carga_manual3(cliente_usuario.trim(), String(monto_total), agente_nombre, agente_password);
+        }
+        //console.log(`Resultado carga = ${resultado}`);
+        if (resultado == 'ok') 
+        {
+            const query3 = `select * from Registrar_Carga_Manual(${id_cliente}, ${id_usuario}, ${monto_importe}, ${monto_bono}, '${titular}', ${id_cuenta_bancaria}, '${observacion}')`;
+            const result3 = await db.handlerSQL(query3);
+            const codigo_operacion = result3.rows[0].codigo_operacion;
+            if (codigo_operacion != 0) {
+                res.status(201).json({ message: `Carga Registrada con Éxito! Código de Operación: ${codigo_operacion}`});
+            } else {
+                res.status(201).json({ message: `Error en la Operación de Carga!`});
+            }
+        } else if (resultado === 'error') {
+            res.status(500).json({ message: 'Error al Cargar Fichas' });
+        } else if (resultado === 'en_espera') {
+            res.status(500).json({ message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
+        }        
+    } catch (error) {
+        res.status(500).json({ message: 'Error al Registrar Cobro!' });
+    }
+});
+
+app.post('/bloqueo_cliente/:id_usuario/:id_cliente/:bloqueo', async (req, res) => {
+    const { id_usuario, id_cliente, bloqueo } = req.params;
+    try {
+        let query = '';
+        let mensaje = '';
+        if (bloqueo == 1) {
+            query = `select Bloqueo_Cliente(${id_usuario}, ${id_cliente}, true)`;
+            mensaje = 'Cliente Bloqueado Exitosamente!';
+        } else {
+            query = `select Bloqueo_Cliente(${id_usuario}, ${id_cliente}, false)`;
+            mensaje = 'Cliente Desbloqueado Exitosamente!';
+        }
+        const result = await db.handlerSQL(query);
+        res.status(201).json({ message: mensaje });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al Modificar Cliente!' });
+    }
+});
+
+app.post('/modificar_agente/:id_agente/:id_usuario/:password/:estado/:oficina/:id_plataforma', async (req, res) => {
+    const { id_agente, id_usuario, password, estado, oficina, id_plataforma } = req.params;
+    try {
+        const query = `select Modificar_Agente(${id_agente}, ${id_usuario}, '${password}', ${estado}, ${oficina}, ${id_plataforma})`;
         const result = await db.handlerSQL(query);
         res.status(201).json({ message: 'Agente Modificado Exitosamente!' });
     } catch (error) {
@@ -681,22 +1002,123 @@ app.post('/registrar_usuario/:id_usuario/:usuario/:password/:id_rol/:id_oficina'
     }
 });
 
-app.post('/registrar_agente/:id_usuario/:usuario/:password/:id_oficina', async (req, res) => {
-    const { id_usuario, usuario, password, id_rol, id_oficina } = req.params;
+app.post('/registrar_agente/:id_usuario/:usuario/:password/:id_oficina/:id_plataforma', async (req, res) => {
+    const { id_usuario, usuario, password, id_oficina, id_plataforma } = req.params;
     try {
-        const queryChek = `select * from v_Agentes where agente_usuario = '${usuario}';`;
+        const queryChek = `select * from v_Agentes where agente_usuario = '${usuario}' and marca_baja = false;`;
         const result1 = await db.handlerSQL(queryChek);
+        //console.log(queryChek);
         if (result1.rows.length > 0) {
             res.status(401).json({ message: 'El usuario ya existe!' });
             return;
         }
 
-        const query = `select Insertar_Agente(${id_usuario}, '${usuario}', '${password}', ${id_oficina})`;
+        const query = `select Insertar_Agente(${id_usuario}, '${usuario}', '${password}', ${id_oficina}, ${id_plataforma})`;
         const result2 = await db.handlerSQL(query);
+        //console.log(query);
 
         res.status(201).json({ message: 'Agente registrado exitosamente.' });
     } catch (error) {
         res.status(500).json({ message: 'Error al registrar Agente.' });
+    }
+});
+
+app.post('/cargar_retiro/:id_operacion/:id_usuario/:monto', async (req, res) => {
+    try {
+        const { id_operacion, id_usuario, monto } = req.params;
+        const query = `select    cliente_usuario,` +
+                                `id_agente,` +
+                                `agente_usuario,` +
+                                `agente_password,` +
+                                `id_plataforma ` +
+        `from v_Clientes_Operaciones where id_operacion = ${id_operacion}`;
+        const result = await db.handlerSQL(query);
+
+        const cliente_usuario = result.rows[0].cliente_usuario;
+        const agente_nombre = result.rows[0].agente_usuario;
+        const agente_password = result.rows[0].agente_password;
+
+        let resultado = '';
+        if (result.rows[0].id_plataforma == 1) {
+            const retiro_manual3 = require('./scrap_bot3/retirar.js');
+            resultado = await retiro_manual3(cliente_usuario.trim(), String(monto), agente_nombre, agente_password);
+        }
+        //console.log(`Resultado carga = ${resultado}`);
+        if (resultado == 'ok') 
+        {
+            const query2 = `select * from Modificar_Cliente_Retiro(${id_operacion}, 2, ${monto}, ${id_usuario})`;
+            await db.handlerSQL(query2);
+            res.status(201).json({ message: `Retiro de Fichas Registrado Exitosamente!` });
+        } else if (resultado == 'error') {
+            res.status(500).json({ message: 'Error al Retirar Fichas' });
+        } else if (resultado == 'en_espera') {
+            res.status(500).json({ message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
+        } else if (resultado == 'faltante') {
+            res.status(201).json({ message: 'Saldo Insuficiente!' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error en el Retiro' });
+    }
+});
+
+app.post('/cargar_cobro/:id_operacion/:id_usuario/:monto/:bono/:id_cuenta_bancaria', async (req, res) => {
+    try {
+        const { id_operacion, id_usuario, monto, bono, id_cuenta_bancaria } = req.params;
+        const query = `select    cliente_usuario,` +
+                                `id_agente,` +
+                                `agente_usuario,` +
+                                `agente_password,` +
+                                `id_plataforma ` +
+        `from v_Clientes_Operaciones where id_operacion = ${id_operacion}`;
+        const result = await db.handlerSQL(query);
+
+        const cliente_usuario = result.rows[0].cliente_usuario;
+        const agente_nombre = result.rows[0].agente_usuario;
+        const agente_password = result.rows[0].agente_password;
+        const monto_carga = Number(monto.trim());
+        const monto_bono = Number(bono.trim());
+        const monto_total = monto_carga + monto_bono;
+
+        let resultado = '';
+        if (result.rows[0].id_plataforma == 1) {
+            const carga_manual3 = require('./scrap_bot3/cargar.js');
+            resultado = await carga_manual3(cliente_usuario.trim(), String(monto_total), agente_nombre, agente_password);
+        }
+        //console.log(`Resultado carga = ${resultado}`);
+        if (resultado == 'ok') 
+        {
+            const query2 = `select * from Modificar_Cliente_Carga(${id_operacion}, 2, ${monto_carga}, ${monto_bono}, ${id_cuenta_bancaria}, ${id_usuario})`;
+            await db.handlerSQL(query2);
+            res.status(201).json({ message: `Carga de Fichas Registrada Exitosamente!` });
+        } else if (resultado === 'error') {
+            res.status(500).json({ message: 'Error al Cargar Fichas' });
+        } else if (resultado === 'en_espera') {
+            res.status(500).json({ message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error al Cargar Cobro' });
+    }
+});
+
+app.post('/rechazar_cobro/:id_operacion/:id_usuario', async (req, res) => {
+    try {
+        const { id_operacion, id_usuario } = req.params;
+        const query2 = `select * from Modificar_Cliente_Carga(${id_operacion}, 3, 0, 0, 0, ${id_usuario})`;
+        await db.handlerSQL(query2);
+        res.status(201).json({ message: `Cobro Rechazado Exitosamente.` });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al Rechazar Cobro.' });
+    }
+});
+
+app.post('/rechazar_retiro/:id_operacion/:id_usuario', async (req, res) => {
+    try {
+        const { id_operacion, id_usuario } = req.params;
+        const query2 = `select * from Modificar_Cliente_Retiro(${id_operacion}, 3, 0, ${id_usuario})`;
+        await db.handlerSQL(query2);
+        res.status(201).json({ message: `Retiro Rechazado Exitosamente.` });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al Rechazar Retiro de Fichas.' });
     }
 });
 
@@ -784,190 +1206,6 @@ router.post('/login', async (req, res) => {
     } catch (error) {
         console.error('Error al buscar usuario:', error);
         res.status(500).json({ message: 'Error al iniciar sesión.' });
-    }
-});
-
-app.post('/usuarios_clientes_carga_manual/:id_cliente_usuario/:id_operador/:id_bot/:id_usuario/:notificacion_aplicacion/:cliente_usuario/:carga_monto/:carga_bono/:carga_usuario/:carga_cbu/:id_motivo/:observacion', async (req, res) => {
-    try {
-        const { id_cliente_usuario, id_operador, id_bot, id_usuario, notificacion_aplicacion, cliente_usuario, carga_monto, carga_bono, carga_usuario, carga_cbu, id_motivo, observacion } = req.params;
-        //console.log(`select * from bot where id_bot = ${id_bot};`);
-        const query = `select * from bot where id_bot = ${id_bot};`;
-        const result = await db.handlerSQL(query);
-        const query2 = `select * from operador where id_operador = ${id_operador};`;
-        const result2 = await db.handlerSQL(query2);
-        const pagina_panel_admin = result.rows[0].pagina_panel_admin;
-        let usuario_panel_nombre = '';
-        let usuario_panel_pass = '';
-        if (id_bot == 1) {
-            usuario_panel_nombre = result2.rows[0].usuario_panel_nombre_bot1;
-            usuario_panel_pass = result2.rows[0].usuario_panel_pass_bot1;
-        } else if (id_bot == 2) {
-            usuario_panel_nombre = result2.rows[0].usuario_panel_nombre_bot2;
-            usuario_panel_pass = result2.rows[0].usuario_panel_pass_bot2;
-        } else if (id_bot == 3) {
-            usuario_panel_nombre = result2.rows[0].usuario_panel_nombre_bot3;
-            usuario_panel_pass = result2.rows[0].usuario_panel_pass_bot3;
-        } else if (id_bot == 4) {
-            usuario_panel_nombre = result2.rows[0].usuario_panel_nombre_bot4;
-            usuario_panel_pass = result2.rows[0].usuario_panel_pass_bot4;
-        } else {
-            res.status(500).json({ message: 'Error al Identificar Bot' });
-        }
-        //db.insertLogMessage(`Obtener_Datos_Bot: Panel : ${result.rows[0].usuario_panel_nombre}`);
-        const variables_utiles_manual = {
-            ADMIN : usuario_panel_nombre,
-            ADMIN_PASS : usuario_panel_pass,
-            PAGE_NAME : pagina_panel_admin,
-            //BRIDGE_PAGE_NAME : 'https://paneles365vip.online',
-            LAUNCH_OPTIONS : {  headless: true, executablePath: pahtChromium }};
-        const carga_manual1 = require('./scrap_bot1/cargar.js');
-        const carga_manual2 = require('./scrap_bot2/cargar.js');
-        const carga_manual3 = require('./scrap_bot3/cargar.js');
-        const carga_manual4 = require('./scrap_bot4/cargar.js');
-        const monto = Number(carga_monto.trim()) + Number(carga_bono.trim());
-        //console.log(`Monto carga = ${monto}`);
-        let resultado = '';
-        if (id_bot == 1) {
-            resultado = await carga_manual1(cliente_usuario.trim(), String(monto), variables_utiles_manual);
-        } else if (id_bot == 2) {
-            resultado = await carga_manual2(cliente_usuario.trim(), String(monto), variables_utiles_manual);
-        } else if (id_bot == 3) {
-            resultado = await carga_manual3(cliente_usuario.trim(), String(monto), variables_utiles_manual);
-        } else if (id_bot == 4) {
-            resultado = await carga_manual4(cliente_usuario.trim(), String(monto), variables_utiles_manual);
-        } else {
-            res.status(500).json({ message: 'Error al Identificar Bot' });
-        }
-        //console.log(`Resultado carga = ${resultado}`);
-        if (resultado === 'ok') {
-            const query2 = `select * from Obtener_Sesion_Cliente_Carga_Manual(${id_cliente_usuario},${id_bot},${id_operador});`;
-            //console.log(query2);
-            const result2 = await db.handlerSQL(query2);
-            const id_sesion_cliente = result2.rows[0].id_sesion_cliente;
-          
-            const query3 = `select * from Registrar_Notificacion('-----',${id_usuario},'${notificacion_aplicacion}','Carga Manual','Usuario: ${cliente_usuario}, Monto: ${carga_monto}','${id_sesion_cliente}-${id_cliente_usuario}', 2)`;
-            //console.log(query3);
-            const result3 = await db.handlerSQL(query3);
-            //console.log('Paso 1');
-            if (result3.rows.length > 0) {
-                const id_notificacion = result3.rows[0].id_notificacion;
-                const query4 = `select * from Registrar_Notificacion_Carga(${id_notificacion},'${carga_usuario}',${carga_monto.trim()})`;
-                //console.log(query4);
-                const result4 = await db.handlerSQL(query4);
-                //console.log('Paso 2');
-                if (result4.rows.length > 0) { 
-                    //console.log('Paso 2.1');
-                    const id_notificacion_carga = result4.rows[0].id_notificacion_carga;
-                    //console.log('Paso 2.2');
-                    const query5 = `select * from Notificacion_Carga_Manual(${id_sesion_cliente}, ${id_notificacion_carga}, '${carga_cbu}', ${id_motivo}, '${observacion}');`;
-                    //console.log(query5);
-                    const result5 = await db.handlerSQL(query5);
-                    //console.log('Paso 2.3');
-                    let observacion_log = '';
-                    //console.log('Paso 3');
-                    if (Number(carga_bono.trim()) > 0) {
-                        //console.log('Paso 3.1');
-                        observacion_log = `${cliente_usuario} : ${carga_monto} - BONO : ${carga_bono}`;
-                    } else {
-                        //console.log('Paso 3.2');
-                        observacion_log = `${cliente_usuario} : ${carga_monto}`;
-                    }
-                    const query6 = `select Registrar_Accion_Sesion_Cliente(${id_sesion_cliente}, 6,'${observacion_log}')`;
-                    //console.log(query6);
-                    const result6 = await db.handlerSQL(query6);
-
-                    const mensaje = `¡Hola ${cliente_usuario}! 🤖\n ¡El Operador ya cargó tus ${monto} fichas! 😁`;
-                    const query7 = `select Mensaje_Usuario_Cliente(${id_cliente_usuario}, '${mensaje}', ${id_usuario})`;
-                    //console.log(query);
-                    const result = await db.handlerSQL(query7);
-
-                    //console.log('Paso 4');
-                    res.status(201).json({ message: 'Carga registrada exitosamente.' });
-                } else {
-                    res.status(500).json({ message: 'Error al Cargar en Notificación Detalle' });
-                }
-            } else {
-                res.status(500).json({ message: 'Error al Cargar en Notificación' });
-            }
-        } else if (resultado === 'error') {
-            res.status(500).json({ message: 'Error de Scrapping al Cargar' });
-        } else if (resultado === 'en_espera') {
-            res.status(500).json({ message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
-        }
-    } catch (error) {
-        //console.error('Error al Cargar', error);
-        res.status(500).json({ message: 'Error al Cargar' });
-    }
-});
-
-app.post('/usuarios_clientes_retiro_manual/:id_cliente_usuario/:id_operador/:id_bot/:id_usuario/:cliente_usuario/:carga_monto/:cbu', async (req, res) => {
-    try {
-        const { id_cliente_usuario, id_operador, id_bot, id_usuario, cliente_usuario, carga_monto, cbu } = req.params;
-        //console.log(`select * from bot where id_bot = ${id_bot};`);
-        const query = `select * from bot where id_bot = ${id_bot};`;
-        const result = await db.handlerSQL(query);
-        const query2 = `select * from operador where id_operador = ${id_operador};`;
-        const result2 = await db.handlerSQL(query2);
-        const pagina_panel_admin = result.rows[0].pagina_panel_admin;
-        let usuario_panel_nombre = '';
-        let usuario_panel_pass = '';
-        if (id_bot == 1) {
-            usuario_panel_nombre = result2.rows[0].usuario_panel_nombre_bot1;
-            usuario_panel_pass = result2.rows[0].usuario_panel_pass_bot1;
-        } else if (id_bot == 2) {
-            usuario_panel_nombre = result2.rows[0].usuario_panel_nombre_bot2;
-            usuario_panel_pass = result2.rows[0].usuario_panel_pass_bot2;
-        } else if (id_bot == 3) {
-            usuario_panel_nombre = result2.rows[0].usuario_panel_nombre_bot3;
-            usuario_panel_pass = result2.rows[0].usuario_panel_pass_bot3;
-        } else if (id_bot == 4) {
-            usuario_panel_nombre = result2.rows[0].usuario_panel_nombre_bot4;
-            usuario_panel_pass = result2.rows[0].usuario_panel_pass_bot4;
-        } else {
-            res.status(500).json({ message: 'Error al Identificar Bot' });
-        }
-        //db.insertLogMessage(`Obtener_Datos_Bot: Panel : ${result.rows[0].usuario_panel_nombre}`);
-        const variables_utiles_manual = {
-            ADMIN : usuario_panel_nombre,
-            ADMIN_PASS : usuario_panel_pass,
-            PAGE_NAME : pagina_panel_admin,
-            LAUNCH_OPTIONS : {  headless: true, executablePath: pahtChromium }};
-        const retiro_manual1 = require('./scrap_bot1/retirar.js');
-        const retiro_manual2 = require('./scrap_bot2/retirar.js');
-        const retiro_manual3 = require('./scrap_bot3/retirar.js');
-        const retiro_manual4 = require('./scrap_bot4/retirar.js');
-        let resultado = '';
-        if (id_bot == 1) {
-            resultado = await retiro_manual1(cliente_usuario.trim(), carga_monto.trim(), variables_utiles_manual);
-        } else if (id_bot == 2) {
-            resultado = await retiro_manual2(cliente_usuario.trim(), carga_monto.trim(), variables_utiles_manual);
-        } else if (id_bot == 3) {
-            resultado = await retiro_manual3(cliente_usuario.trim(), carga_monto.trim(), variables_utiles_manual);
-        } else if (id_bot == 4) {
-            resultado = await retiro_manual4(cliente_usuario.trim(), carga_monto.trim(), variables_utiles_manual);
-        } else {
-            res.status(500).json({ message: 'Error al Identificar Bot' });
-        }
-        //console.log(`Resultado carga = ${resultado}`);
-        if (resultado === 'ok') {
-            const query3 = `select * from Obtener_Sesion_Cliente_Carga_Manual(${id_cliente_usuario},${id_bot},${id_operador});`;
-            //console.log(query2);
-            const result3 = await db.handlerSQL(query3);
-            const id_sesion_cliente = result3.rows[0].id_sesion_cliente;
-
-            const query4 = `select Registrar_Accion_Sesion_Cliente(${id_sesion_cliente}, 9,'${cliente_usuario} - Monto : ${carga_monto} - CBU : ${cbu}')`;
-            //console.log(query6);
-            const result4 = await db.handlerSQL(query4);
-
-            res.status(201).json({ message: 'Retiro registrado exitosamente.' });
-        } else if (resultado === 'faltante') {
-            res.status(201).json({ message: '¡¡El usuario no tiene suficientes fichas!!' });
-        } else {
-            res.status(500).json({ message: 'Error Scrapping al Retirar Fichas' });
-        }
-    } catch (error) {
-        //console.error('Error al Retirar Fichas', error);
-        res.status(500).json({ message: 'Error al Retirar Fichas' });
     }
 });
 
@@ -1072,19 +1310,18 @@ app.post('/modificar_oficina/:id_usuario/:id_oficina/:oficina/:contactoWhatsapp/
     }
 });
 
-app.post('/crear_oficina/:id_usuario/:operador/:numeroOperador/:linkOperadorTelegram/:linkCanalTelegram/:estado/:bonoInicial/:bonoPrimeraCarga/:bonoRecupero/:bonoCargaPerpetua/:minimoCarga/:minimoRetiro/:minimoEsperaRetiro/:diasRecuperoUltimo/:diasRecuperoMensaje/:usuarioPanelNombreBot1/:usuarioPanelPassBot1/:usuarioPanelNombreBot2/:usuarioPanelPassBot2/:usuarioPanelNombreBot3/:usuarioPanelPassBot3/:usuarioPanelNombreBot4/:usuarioPanelPassBot4', async (req, res) => {
+app.post('/crear_oficina/:id_usuario/:oficina/:contactoWhatsapp/:contactoTelegram/:estado/:bonoPrimeraCarga/:bonoCargaPerpetua/:minimoCarga/:minimoRetiro/:minimoEsperaRetiro', async (req, res) => {
     try {    
-            let { id_usuario , operador, numeroOperador, linkOperadorTelegram, linkCanalTelegram, estado, bonoInicial, bonoPrimeraCarga, bonoRecupero, bonoCargaPerpetua, minimoCarga, minimoRetiro, minimoEsperaRetiro, diasRecuperoUltimo, diasRecuperoMensaje, usuarioPanelNombreBot1, usuarioPanelPassBot1, usuarioPanelNombreBot2, usuarioPanelPassBot2, usuarioPanelNombreBot3, usuarioPanelPassBot3, usuarioPanelNombreBot4, usuarioPanelPassBot4 } = req.params;
-            numeroOperador = numeroOperador.replace('<<','/');
-            linkOperadorTelegram = linkOperadorTelegram.replace('<<','/');
-            linkCanalTelegram = linkCanalTelegram.replace('<<','/');
-            const query = `select * from Insertar_Operador(${id_usuario}, '${operador}', '${numeroOperador}', ${estado}, ${bonoInicial}, ${bonoPrimeraCarga}, ${bonoRecupero}, ${bonoCargaPerpetua}, ${minimoCarga}, ${minimoRetiro}, ${minimoEsperaRetiro}, ${diasRecuperoUltimo}, ${diasRecuperoMensaje}, '${usuarioPanelNombreBot1}', '${usuarioPanelPassBot1}', '${usuarioPanelNombreBot2}', '${usuarioPanelPassBot2}', '${usuarioPanelNombreBot3}', '${usuarioPanelPassBot3}', '${usuarioPanelNombreBot4}', '${usuarioPanelPassBot4}')`;
-            console.log(query);
+            let { id_usuario , oficina, contactoWhatsapp, contactoTelegram, estado, bonoPrimeraCarga, bonoCargaPerpetua, minimoCarga, minimoRetiro, minimoEsperaRetiro } = req.params;
+            //console.log('llego');
+            contactoTelegram = contactoTelegram.replace('<<','/');
+            const query = `select * from Insertar_Oficina(${id_usuario}, '${oficina}', '${contactoWhatsapp}', '${contactoTelegram}', ${estado}, ${bonoPrimeraCarga}, ${bonoCargaPerpetua}, ${minimoCarga}, ${minimoRetiro}, ${minimoEsperaRetiro})`;
+            //console.log(query);
             const result = await db.handlerSQL(query);
-            if (result.rows[0].id_operador == 0) {
-                res.status(401).json({ message: `Oficina ${operador} ya existe` });
+            if (result.rows[0].id_oficina == 0) {
+                res.status(401).json({ message: `Oficina ${oficina} ya existe` });
             } else {
-                res.status(201).json({ message: `Oficina ${operador} ya creada` });
+                res.status(201).json({ message: `Oficina ${oficina} ya creada` });
             }
         }
     catch (error) {

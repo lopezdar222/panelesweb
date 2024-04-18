@@ -1,0 +1,59 @@
+<html>
+<head>
+    <h2><%= title %></h2> 
+</head>
+<body>
+    <%if (message === 'ok') {%>
+        <br>
+        <table>
+            <tr>
+                <th>
+                    Cliente: <%= datos[0].cliente_usuario %>        
+                </th>
+                <th>      
+                    Agente: <%= datos[0].agente_usuario %>        
+                </th>
+            </tr>
+            <tr>
+                <th>      
+                    Plataforma: <%= datos[0].plataforma %>        
+                </th>
+                <th>      
+                    Oficina: <%= datos[0].oficina %>        
+                </th>
+            </tr>
+                <th>
+                    Fecha/Hora: <%= datos[0].fecha_hora_operacion %>        
+                </th>
+                <th>      
+                    Operación: <%= datos[0].codigo_operacion %>        
+                </th>
+            </tr>
+            <tr>
+                <th>      
+                   Titular: <%= datos[0].retiro_titular %>        
+                </th>
+                <th>      
+                   CBU: <%= datos[0].retiro_cbu %>        
+                </th>
+            </tr>
+            <tr>
+                <th colspan = 2> 
+                    <label for="monto_retiro">Monto Retiro:</label>
+                    <input type="number" id="monto_retiro" value="<%= datos[0].retiro_importe %>">
+                </th>
+            </tr>
+        </table>
+        <h3 class="warning">¡Al realizar esta acción, no habrá opción de Deshacer!</h3>
+        <div id="msgResultado">
+            <button onclick="cargar_Retiro(<%=datos[0].id_operacion %>);">Aceptar Retiro</button>
+        </div>
+        <div id="btnRechazar">
+            <button onclick="rechazar_Retiro(<%=datos[0].id_operacion %>);">Rechazar Retiro</button>
+        </div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

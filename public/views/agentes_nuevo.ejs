@@ -23,6 +23,16 @@
                     </select>
                 </th>
             </tr>
+            <tr>       
+                <th> 
+                    <label for="plataforma">Plataforma:</label><br>
+                    <select id="plataforma">
+                        <% datos_plataforma.forEach(function(plataforma) { %>
+                            <option value="<%= plataforma.id_plataforma %>"><%=plataforma.plataforma%></option>
+                        <% }); %>
+                    </select>
+                </th>
+            </tr>
         </table>
     <%} else {%>
         <h3><%= message %></h3>

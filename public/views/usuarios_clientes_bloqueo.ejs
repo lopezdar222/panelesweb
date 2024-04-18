@@ -1,0 +1,12 @@
+<% if (String(bloqueado) == 'false') { %>
+    <h3 class="warning">¡Al BLOQUEAR al cliente, NO SE PODRÁ ACCEDER a la Landing con su Usuario ni desde su IP</h3>
+    <div id="msgResultado">
+        <button onclick="bloqueo_Cliente(<%= id_cliente %>, 1);">Confirmar</button>
+    </div>
+<% } else { %>
+    <h3 class="warning">¡Al DESBLOQUEAR al cliente, YA SE PODRÁ ACCEDER a la Landing con su Usuario y desde su IP</h3>
+    <div id="msgResultado">
+        <button onclick="bloqueo_Cliente(<%= id_cliente %>, 0);">Confirmar</button>
+    </div>
+<% } %>
+<button onclick="cerrarModal();">Finalizar</button>

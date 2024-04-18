@@ -19,40 +19,47 @@
         <thead>
             <tr>
                 <th>Oficina</th>
+                <th>Plataforma</th>
+                <th>Agente</th>
                 <th>Fecha/Hora</th>
-                <th>App</th>
                 <th>Usuario</th>
+                <th>Operación</th>
+                <th>Accion</th>
+                <th>Estado</th>
                 <th>Monto</th>
                 <th>Procesado</th>
-                <th>Cliente Número</th>
-                <th>Cliente Usuario</th>
-                <th>Panel</th>
             </tr>
         </thead>
         <tbody>	
             <% datos.forEach(function(dato) { %>
                 <tr>
-                    <td><%= dato.operador %></td>
-                    <td><%= dato.fecha_hora %></td>
-                    <td><%= dato.nombre_aplicacion %></td>
-                    <td><%= dato.usuario_detectado %></td>
-                    <td><%= dato.monto_detectado %></td>
-                    <% if (dato.marca_procesado == true) { %>
-                        <td><%= dato.fecha_hora_procesado %></td>
-                        <% if (String(dato.pagina_panel_admin).length == 4) { %>
-                            <td>Pago Anulado</td>
-                            <td></td>
-                            <td></td>
-                        <% } else { %>
-                            <td><%= dato.cliente_numero %></td>
-                            <td><%= dato.cliente_usuario %></td>
-                            <td><%= dato.pagina_panel_admin %></td>
-                        <% } %>
+                    <td><%= dato.oficina %></td>
+                    <td><%= dato.plataforma %></td>
+                    <td><%= dato.agente_usuario %></td>
+                    <td><%= dato.fecha_hora_operacion %></td>
+                    <td><%= dato.cliente_usuario %></td>
+                    <td><%= dato.codigo_operacion %></td>
+                    <td><%= dato.accion %></td>
+                    <td><%= dato.estado %></td>
+                    <% if (dato.id_accion == 1) { %>
+                        <td><%= parseInt(dato.carga_importe,10) + parseInt(dato.carga_bono, 10) %><br>(CARGA : <%= dato.carga_importe %> - BONO : <%= dato.carga_bono %>)</td>
+                    <% } else if (dato.id_accion == 2) { %>
+                        <td><%= dato.retiro_importe %></td>
+                    <% } else if (dato.id_accion == 5) { %>
+                        <td><%= parseInt(dato.carga_importe,10) + parseInt(dato.carga_bono, 10) %><br>(CARGA : <%= dato.carga_importe %> - BONO : <%= dato.carga_bono %>)
+                            <br><a onclick="abrirModal(29, <%=dato.id_operacion %>);"><h6 class="warning">(Ver Detalle)</h6></a>
+                        </td>
+                    <% } else if (dato.id_accion == 6) { %>
+                        <td><%= dato.retiro_importe %>
+                            <br><a onclick="abrirModal(29, <%=dato.id_operacion %>);"><h6 class="warning">(Ver Detalle)</h6></a>
+                        </td>
                     <% } else { %>
-                        <td> (Sin Procesar) </td>
-                        <td> - </td>
-                        <td> - </td>
-                        <td><button onclick="abrirModal(27, <%=dato.id_notificacion_carga %>);">ANULAR</button></td>
+                        <td>-</td>
+                    <% } %>
+                    <% if (dato.id_estado == 1) { %>
+                        <td><button onclick="abrirModal(3, <%=dato.id_operacion %>, <%=dato.id_accion %>, <%=id_oficina%>);">VERIFICAR</button></td>
+                    <% } else { %>
+                        <td><%= dato.fecha_hora_proceso %></td>
                     <% } %>
                 </tr>
             <% }); %>

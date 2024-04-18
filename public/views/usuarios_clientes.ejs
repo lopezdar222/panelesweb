@@ -1,0 +1,71 @@
+<html>
+<head>
+    <!--h1><%= title %></h1-->
+</head>
+<body>
+<!----------------------INICIO FILTER & SEARCH----------------------->
+    <div class="wrapper">
+        <div class="search-container">
+            <input type="search" id="search-input" placeholder="Busqueda rápida ↯">
+            <span class="material-symbols-outlined">search</span>
+            <button onclick="abrirModal(16);" class="help">
+                <span class="material-symbols-outlined">help_center</span>
+            </button>
+        </div>
+    </div>
+    <!----------------------FIN FILTER & SEARCH----------------------->
+    <%if (message === 'ok') {%>
+        <table id="miTabla">
+            <thead>
+                <tr>
+                    <th>Oficina</th>
+                    <th>Plataforma</th>
+                    <th>Agente</th>
+                    <th>Cliente</th>
+                    <th>Chat</th>
+                    <th>Carga</th>
+                    <th>Retiro</th>
+                    <th>Bloqueo</th>
+                </tr>
+            </thead>
+            <tbody>
+                    <% datos.forEach(function(dato) { %>
+                    <tr>
+                        <td><%= dato.oficina %></td>
+                        <td><%= dato.plataforma %></td>
+                        <td><%= dato.agente_usuario %></td>
+                        <td><%= dato.cliente_usuario %></td>
+                        <td><button class="botones" onclick="abrirModal(24, <%=dato.id_cliente %>);">
+                                <span class="material-symbols-outlined">history</span>
+                            </button>
+                        </td>
+                        <td><button class="botones"  onclick="abrirModal(25, <%=dato.id_cliente %>);">
+                                <span class="material-symbols-outlined">add</span>                        
+                            </button>
+                        </td>
+                        <td><button class="botones"  onclick="abrirModal(26, <%=dato.id_cliente %>);">
+                                <span class="material-symbols-outlined">remove</span>                    
+                            </button>
+                        </td>
+                        <td><button class="botones"  onclick="abrirModal(27, <%=dato.id_cliente %>);">
+                                <% if (dato.bloqueado == true) { %>
+                                    <div class="warning">
+                                        <span class="material-symbols-outlined">warning</span>
+                                    </div>
+                                <% } else { %>
+                                    <div class="success">
+                                        <span class="material-symbols-outlined">verified_user</span>
+                                    </div>
+                                <% } %>
+                            </button>
+                        </td>
+                    </tr>
+                    <% }); %>
+            </tbody>
+        </table>
+        <div id="paginacion" class="pagenumbers"></div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+</body>
+</html>
