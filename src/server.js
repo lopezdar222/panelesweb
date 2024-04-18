@@ -190,6 +190,34 @@ app.get('/usuarios_clientes_carga', async (req, res) => {
     }
 });
 
+app.get('/usuarios_clientes_retiro', async (req, res) => {
+    try 
+    {
+        // Obtener los parámetros de la URL
+        const id_cliente = parseInt(req.query.id_cliente, 10);
+        const query2 = `select id_cliente,` +
+                                `cliente_usuario,` +
+                                `agente_usuario, ` +
+                                `plataforma, ` +
+                                `id_oficina, ` +
+                                `oficina ` +
+                        `from v_Clientes where id_cliente = ${id_cliente}`;
+        
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('usuarios_clientes_retiro', { message: 'Cliente No encontrado', title: 'Retiro de Fichas'});
+            return;
+        }
+        const datos = result2.rows[0];
+
+        //console.log(datos);
+        res.render('usuarios_clientes_retiro', { message: 'ok', title: 'Retiro de Fichas', datos : datos });
+    }
+    catch (error) {
+        res.render('usuarios_clientes_retiro', { message: 'error', title: 'Retiro de Fichas'});
+    }
+});
+
 app.get('/agentes', async (req, res) => {
     // Obtener los parámetros de la URL
     const id_usuario = parseInt(req.query.id_usuario, 10);
@@ -895,6 +923,51 @@ app.get('/monitoreo_landingweb_detalle', async (req, res) => {
 });
 
 // Páginas Generales
+app.post('/cargar_retiro_manual/:id_cliente/:id_usuario/:monto_importe/:cbu/:titular/:observacion', async (req, res) => {
+    try {
+        let { id_cliente, id_usuario, monto_importe, cbu, titular, observacion } = req.params;
+        observacion = observacion.replace('<<','/');
+        titular = titular.replace('<<','/');
+        const query = `select    id_cliente,` +
+                                `cliente_usuario,` +
+                                `agente_usuario,` +
+                                `agente_password,` +
+                                `id_plataforma ` +
+                        `from v_Clientes where id_cliente = ${id_cliente}`;
+        const result = await db.handlerSQL(query);
+
+        const cliente_usuario = result.rows[0].cliente_usuario;
+        const agente_nombre = result.rows[0].agente_usuario;
+        const agente_password = result.rows[0].agente_password;
+
+        let resultado = '';
+        if (result.rows[0].id_plataforma == 1) {
+            const retiro_manual3 = require('./scrap_bot3/retirar.js');
+            resultado = await retiro_manual3(cliente_usuario.trim(), String(monto_importe), agente_nombre, agente_password);
+        }
+        //console.log(`Resultado carga = ${resultado}`);
+        if (resultado == 'ok')
+        {
+            const query3 = `select * from Registrar_Retiro_Manual(${id_cliente}, ${id_usuario}, ${monto_importe}, '${cbu}', '${titular}', '${observacion}')`;
+            const result3 = await db.handlerSQL(query3);
+            const codigo_operacion = result3.rows[0].codigo_operacion;
+            if (codigo_operacion != 0) {
+                res.status(201).json({ message: `Retiro Registrado con Éxito! Código de Operación: ${codigo_operacion}`});
+            } else {
+                res.status(201).json({ message: `Error en la Operación de Retiro!`});
+            }
+        } else if (resultado === 'error') {
+            res.status(500).json({ message: 'Error al Retirar Fichas' });
+        } else if (resultado === 'en_espera') {
+            res.status(500).json({ message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
+        } else if (resultado === 'faltante') {
+            res.status(201).json({ message: 'Saldo Insuficiente!' });
+        }   
+    } catch (error) {
+        res.status(500).json({ message: 'Error al Registrar Retiro!' });
+    }
+});
+
 app.post('/cargar_cobro_manual/:id_cliente/:id_usuario/:monto_importe/:monto_bono/:titular/:id_cuenta_bancaria/:observacion', async (req, res) => {
     try {
         let { id_cliente, id_usuario, monto_importe, monto_bono, titular, id_cuenta_bancaria, observacion } = req.params;

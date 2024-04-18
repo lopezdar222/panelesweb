@@ -729,9 +729,32 @@ BEGIN
 	INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
 	VALUES (aux_codigo_operacion, 5, in_id_cliente, 2, false, false, now(), now(), in_id_usuario)
 	RETURNING operacion.id_operacion INTO aux_id_operacion;
+
+	INSERT INTO operacion_carga (id_operacion, titular, importe, id_cuenta_bancaria, bono, sol_importe, sol_id_cuenta_bancaria, sol_bono, observaciones)
+	VALUES (aux_id_operacion, in_titular, in_importe, in_id_cuenta_bancaria, in_bono, in_importe, in_id_cuenta_bancaria, in_bono, in_observaciones);
 	
-	INSERT INTO operacion_carga (id_operacion, titular, importe, id_cuenta_bancaria, bono, sol_importe, sol_id_cuenta_bancaria, sol_bono)
-	VALUES (aux_id_operacion, in_titular, in_importe, in_id_cuenta_bancaria, in_bono, in_importe, in_id_cuenta_bancaria, in_bono);
+	RETURN QUERY SELECT aux_id_operacion, aux_codigo_operacion;
+END;
+$$ LANGUAGE plpgsql;
+
+--DROP FUNCTION Registrar_Retiro_Manual(in_id_cliente INTEGER, in_id_usuario INTEGER, in_importe NUMERIC, in_cbu VARCHAR(30), in_titular VARCHAR(200), in_observaciones VARCHAR(200))  
+CREATE OR REPLACE FUNCTION Registrar_Retiro_Manual(in_id_cliente INTEGER, in_id_usuario INTEGER, in_importe NUMERIC, in_cbu VARCHAR(30), in_titular VARCHAR(200), in_observaciones VARCHAR(200)) 
+RETURNS TABLE (id_operacion INTEGER, codigo_operacion INTEGER) AS $$
+DECLARE
+    aux_id_operacion INTEGER;
+    aux_codigo_operacion INTEGER;
+BEGIN
+	SELECT	COALESCE(COUNT(ope.id_operacion), 0) + 1
+	INTO 	aux_codigo_operacion
+	FROM operacion ope
+	WHERE ope.id_cliente = in_id_cliente;
+	
+	INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+	VALUES (aux_codigo_operacion, 6, in_id_cliente, 2, false, false, now(), now(), in_id_usuario)
+	RETURNING operacion.id_operacion INTO aux_id_operacion;
+
+	INSERT INTO operacion_retiro (id_operacion, cbu, titular, importe, sol_importe, observaciones)
+	VALUES (aux_id_operacion, in_cbu, in_titular, in_importe, in_importe, in_observaciones);
 	
 	RETURN QUERY SELECT aux_id_operacion, aux_codigo_operacion;
 END;
@@ -975,6 +998,7 @@ SELECT 	cl.id_cliente,
 		e.estado,
 		ac.id_accion,
 		ac.accion,
+		u.usuario,
 		COALESCE(o.fecha_hora_creacion, '1900-01-01')		AS fecha_hora_operacion,
 		COALESCE(o.fecha_hora_ultima_modificacion, '1900-01-01')	AS fecha_hora_proceso,
 		COALESCE(opr.importe, 0)							AS retiro_importe,
@@ -985,10 +1009,13 @@ SELECT 	cl.id_cliente,
 		COALESCE(opc.titular, '')							AS carga_titular,
 		COALESCE(opc.id_cuenta_bancaria, 0)					AS carga_id_cuenta_bancaria,
 		COALESCE(opc.bono, 0)								AS carga_bono,
-		COALESCE(opc.observaciones, '')						AS carga_observaciones		
+		COALESCE(opc.observaciones, '')						AS carga_observaciones,
+		COALESCE(opcb.nombre || '-' || opcb.alias || '-' || opcb.cbu, '')	AS carga_cuenta_bancaria
 FROM cliente cl JOIN operacion o
 			ON (cl.id_cliente = o.id_cliente
 			   	AND o.marca_baja = false)
+		JOIN usuario u
+			ON (o.id_usuario_ultima_modificacion = u.id_usuario)
 		JOIN estado e
 			ON (o.id_estado = e.id_estado)
 		JOIN accion ac
@@ -1003,6 +1030,8 @@ FROM cliente cl JOIN operacion o
 			ON (o.id_operacion = opr.id_operacion)
 		LEFT JOIN operacion_carga opc
 			ON (o.id_operacion = opc.id_operacion)
+		LEFT JOIN cuenta_bancaria opcb
+			ON (opc.id_cuenta_bancaria = opcb.id_cuenta_bancaria)
 WHERE cl.marca_baja = false;
 --select * from v_Clientes_Operaciones order by id_operacion desc
 

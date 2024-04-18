@@ -25,6 +25,7 @@ let rechazando_retiro = 0;
 let anulando_notificacion_cobro = 0;
 let bloqueando_cliente = 0;
 let cargando_cobro_manual = 0;
+let cargando_retiro_manual = 0;
 const numFilasPorPagina = 10;
 let paginaActual = 1;
 let datos = [];
@@ -792,6 +793,58 @@ const cargar_Retiro = async (id_operacion) => {
     } catch (error) {
         cargando_retiro = 0;
         msgResultado.innerHTML = 'Error al Cargar Cobro';
+    }
+};
+
+const cargar_Retiro_Manual = async (id_cliente) => {
+    if (cargando_retiro_manual === 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    cargando_retiro_manual = 1;
+    const msgResultado = document.getElementById('msgResultado');
+    const monto_importe = document.getElementById('monto');
+    const cbu = document.getElementById('cbu');
+    const titular = document.getElementById('titular');
+    const observacion = document.getElementById('observacion');
+
+    if (monto_importe.value == '') {
+        msgResultado.innerHTML = 'Importe Vacío!';
+        cargando_retiro_manual = 0;
+        return;
+    }
+    if (Number(monto_importe.value) == 0) {
+        msgResultado.innerHTML = 'El Importe debe ser mayor a Cero!';
+        cargando_retiro_manual = 0;
+        return;
+    }
+    if (cbu.value == '') {
+        msgResultado.innerHTML = 'CBU Vacío!';
+        cargando_retiro_manual = 0;
+        return;
+    }
+    if (titular.value == '') {
+        msgResultado.innerHTML = 'Titular Vacío!';
+        cargando_retiro_manual = 0;
+        return;
+    }
+    if (observacion.value == '') {
+        observacion.value = '-';
+    }
+    observacion.value = observacion.value.replace('/','<<');
+    titular.value = titular.value.replace('/','<<');
+    try {
+        const response = await fetch(`/cargar_retiro_manual/${id_cliente}/${id_usuario}/${monto_importe.value}/${cbu.value}/${titular.value}/${observacion.value}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        const data = await response.json();
+        msgResultado.innerHTML = data.message;
+        cargando_retiro_manual = 0;
+    } catch (error) {
+        cargando_retiro_manual = 0;
+        msgResultado.innerHTML = 'Error al Cargar Retiro Manual';
     }
 };
 
