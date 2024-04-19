@@ -1,0 +1,28 @@
+<h1><%= title %></h1>
+<br>
+<style>
+    .izquierda {
+        text-align: left; /* Alinea el texto a la izquierda */
+    }
+</style>
+<div class="izquierda">
+    <p>En la pantalla de <b>Monitoreo LandingWeb</b>, se pueden visualizar los siguientes <b>atributos</b>:</p>
+    <br>
+    <ul>
+        <li><b>Oficina</b>: Descripción de la Oficina</li>
+        <li><b>Fecha/Hora</b>: Fecha y Hora de realización de la <b>Notificación de Cobro</b>.</li>
+        <li><b>App</b>: Billetera Virtual o Banco, desde donde se cargó la <b>Notificación de Cobro</b>.</li>
+        <li><b>Usuario</b>: Nombre del Usuario de la Cuenta del Cliente desde donde se hizo la <b>Transferencia</b>.</li>
+        <li><b>Monto</b>: Monto informado de la <b>Transferencia</b>.</li>
+        <li><b>Procesado</b>: Momento en el que el Cliente, a través del Bot, realizó la Carga de Fichas habiéndose identificado
+                su <b>Transferencia</b>. Si aún el Cliente no hizo la Carga de Fichas, aparece la descripción <b>"Sin Procesar",
+                    lo que significa que es un cobro pendiente de imputar al Cliente.</b></li>
+        <li><b>Cliente Número</b>: Número de Teléfono del Cliente.</li>
+        <li><b>Cliente Usuario</b>: Usuario del Cliente.</li>
+        <li><b>Panel</b>: Página de Administración de Panel, donde se realizó la Carga de Fichas.</li>
+    </ul>
+    <br><br>
+    <p>Para Anular una Notificación de Pago utilizar el botón <b>ANULAR</b>. ¡Al confirmar esta acción, el Usuario NO Podrá usar este Pago para Cargar Fichas mediante el Bot!.</p>
+    <br>
+</div>
+<button onclick="cerrarModal();">Finalizar</button> 

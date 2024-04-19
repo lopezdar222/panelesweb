@@ -51,6 +51,10 @@ app.get('/usuarios_ayuda', async (req, res) => {
     res.render('usuarios_ayuda', { title: 'Tutorial de Usuarios' });
 });
 
+app.get('/usuarios_clientes_ayuda', async (req, res) => {
+    res.render('usuarios_clientes_ayuda', { title: 'Tutorial de Clientes' });
+});
+
 app.get('/monitoreo_cuentas_cobro_ayuda', async (req, res) => {
     res.render('monitoreo_cuentas_cobro_ayuda', { title: 'Tutorial de Monitoreo Cuentas Cobro' });
 });
@@ -65,6 +69,10 @@ app.get('/cuentas_cobro_descargas_ayuda', async (req, res) => {
 
 app.get('/configuracion_oficinias_ayuda', async (req, res) => {
     res.render('configuracion_oficinias_ayuda', { title: 'Tutorial de Configuracion de Oficinas' });
+});
+
+app.get('/monitoreo_landingweb_ayuda', async (req, res) => {
+    res.render('monitoreo_landingweb_ayuda', { title: 'Monitoreo de Solicitudes' });
 });
 
 app.get('/reportes', async (req, res) => {
