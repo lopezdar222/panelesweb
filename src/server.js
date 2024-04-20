@@ -136,6 +136,79 @@ app.get('/usuarios_clientes', async (req, res) => {
     }
 });
 
+app.get('/usuarios_clientes_chat', async (req, res) => {
+    try 
+    {
+        // Obtener los parámetros de la URL
+        const id_cliente = parseInt(req.query.id_cliente, 10);
+        const query0 = `select cliente_usuario, en_sesion from cliente where id_cliente = ${id_cliente};`;
+        //console.log(query);
+        const result0 = await db.handlerSQL(query0);
+        const en_sesion = result0.rows[0].en_sesion;
+        const chat_title = 'Chat con Cliente ' + result0.rows[0].cliente_usuario;
+
+        const query = `select id_cliente_chat,` +
+                                `id_cliente, ` +
+                                `mensaje, ` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY') as fecha_mensaje,` +
+                                `TO_CHAR(fecha_hora_creacion, 'HH24:MI') as horario_mensaje, ` +
+                                `enviado_cliente, ` +
+                                `visto_cliente, ` +
+                                `visto_operador, ` +
+                                `id_usuario, ` +
+                                `usuario, ` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY') = LAG(TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY')) ` +
+                                `OVER (ORDER BY id_cliente_chat) AS misma_fecha ` +
+                        `from Obtener_Cliente_Chat(${id_cliente}, false);`;
+        //console.log(query);
+        const result = await db.handlerSQL(query);
+        const datos = result.rows;
+        //console.log(datos);
+        res.render('usuarios_clientes_chat', { message: 'ok', title: chat_title, id_cliente : id_cliente, datos : datos, en_sesion : en_sesion });
+    }
+    catch (error) {
+        res.render('usuarios_clientes_chat', { message: 'error', title: 'Chat'});
+    }
+});
+
+
+app.get('/usuarios_clientes_chat_detalle', async (req, res) => {
+    try 
+    {
+        // Obtener los parámetros de la URL
+        const id_cliente = parseInt(req.query.id_cliente, 10);
+        const id_usuario = parseInt(req.query.id_usuario, 10);
+        const mensaje_operador = req.query.mensaje.replace('<<','/');
+
+        let query = `select id_cliente_chat,` +
+                                `id_cliente, ` +
+                                `mensaje, ` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY') as fecha_mensaje,` +
+                                `TO_CHAR(fecha_hora_creacion, 'HH24:MI') as horario_mensaje, ` +
+                                `enviado_cliente, ` +
+                                `visto_cliente, ` +
+                                `visto_operador, ` +
+                                `id_usuario, ` +
+                                `usuario, ` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY') = LAG(TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY')) ` +
+                                `OVER (ORDER BY id_cliente_chat) AS misma_fecha `;
+        
+        if (mensaje_operador == '') {        
+            query = query + `from Obtener_Cliente_Chat(${id_cliente}, false);`;
+        } else {        
+            query = query + `from Insertar_Cliente_Chat(${id_cliente}, false, '${mensaje_operador}', ${id_usuario});`;
+        }
+        console.log(query);
+        const result = await db.handlerSQL(query);
+        const datos = result.rows;
+        console.log(datos);
+        res.render('usuarios_clientes_chat_detalle', { message: 'ok', datos : datos });
+    }
+    catch (error) {
+        res.render('usuarios_clientes_chat_detalle', { message: 'sin mensajes' });
+    }
+});
+
 app.get('/usuarios_clientes_bloqueo', async (req, res) => {
     try 
     {
@@ -858,6 +931,8 @@ app.get('/monitoreo_landingweb', async (req, res) => {
                                 `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_operacion,` +
                                 `TO_CHAR(fecha_hora_proceso, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_proceso,` +
                                 `retiro_importe,` +
+                                `retiro_cbu,` +
+                                `retiro_titular,` +
                                 `carga_importe,` +
                                 `carga_bono ` +
                         `from v_Clientes_Operaciones where marca_baja = false`;

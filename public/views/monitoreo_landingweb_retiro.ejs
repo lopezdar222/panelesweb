@@ -1,11 +1,28 @@
 <html>
 <head>
-    <h2><%= title %></h2> 
+    <style>
+        .container {
+            display: flex;
+            width: 100%; /* Establece el ancho de la tabla al 100% del contenedor */
+        }
+        .column {
+            flex: 1; /* Hace que las columnas se expandan para llenar el espacio disponible */
+        }
+        table {
+            width: 100%; /* Establece el ancho de la tabla al 100% del contenedor */
+            border-collapse: collapse; /* Combina los bordes de las celdas */
+        }
+    </style>
 </head>
 <body>
     <%if (message === 'ok') {%>
         <br>
         <table>
+            <tr>
+                <th colspan="2">
+                    <h2><%= title %></h2> 
+                </th>
+            </tr>
             <tr>
                 <th>
                     Cliente: <%= datos[0].cliente_usuario %>        
@@ -44,16 +61,22 @@
                 </th>
             </tr>
         </table>
-        <h3 class="warning">¡Al realizar esta acción, no habrá opción de Deshacer!</h3>
-        <div id="msgResultado">
-            <button onclick="cargar_Retiro(<%=datos[0].id_operacion %>);">Aceptar Retiro</button>
+        <div class="container">
+            <h3 class="warning">¡Al realizar esta acción, no habrá opción de Deshacer!</h3>
         </div>
-        <div id="btnRechazar">
-            <button onclick="rechazar_Retiro(<%=datos[0].id_operacion %>);">Rechazar Retiro</button>
+        <div class="container">
+            <div id="msgResultado" class="column">
+                <button onclick="cargar_Retiro(<%=datos[0].id_operacion %>);">Aceptar</button>
+            </div>
+            <div id="btnRechazar" class="column">
+                <button onclick="rechazar_Retiro(<%=datos[0].id_operacion %>);">Rechazar</button>
+            </div>
         </div>
     <%} else {%>
         <h3><%= message %></h3>
     <%} %>
-    <button onclick="cerrarModal();">Finalizar</button>
+    <div class="container">
+        <button onclick="cerrarModal();">Finalizar</button>
+    </div>
 </body>
 </html>

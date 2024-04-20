@@ -91,15 +91,44 @@ function cargarContenido(url) {
       });
 }
 
+
+function cargarContenidoChats(id_cliente, mensaje) {
+    if (mensaje != '') 
+    {
+        const mensaje_envio = mensaje.replace('/','<<');
+        const url = `/usuarios_clientes_chat_detalle?id_cliente=${encodeURIComponent(id_cliente)}&mensaje=${encodeURIComponent(mensaje_envio)}&id_usuario=${encodeURIComponent(id_usuario)}`;
+        fetch(url)
+        .then(response => response.text())
+        .then(data => {
+            const chatMessages = document.getElementById("chat-messages");
+            chatMessages.innerHTML = data;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            document.getElementById('message-input').value = '';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+}
+
 function cargarContenidoModal(url) {
     fetch(url)
       .then(response => response.text())
       .then(data => {
         document.getElementById('modal-contenido').innerHTML = data;
       })
+      .then(scrollToBottom(url))
       .catch(error => {
         console.error('Error:', error);
       });
+}
+            
+function scrollToBottom(url) {
+    if (url.indexOf('usuarios_clientes_chat') !== -1 ) 
+    {
+        const chatMessages = document.getElementById("chat-messages");
+        //chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 }
 
 function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {

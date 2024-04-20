@@ -44,7 +44,7 @@
                     <% if (dato.id_accion == 1) { %>
                         <td><%= parseInt(dato.carga_importe,10) + parseInt(dato.carga_bono, 10) %><br>(CARGA : <%= dato.carga_importe %> - BONO : <%= dato.carga_bono %>)</td>
                     <% } else if (dato.id_accion == 2) { %>
-                        <td><%= dato.retiro_importe %></td>
+                        <td><%= dato.retiro_importe %><br>(CBU : <%= dato.retiro_cbu %> - TITULAR : <%= dato.retiro_titular %>)</td>
                     <% } else if (dato.id_accion == 5) { %>
                         <td><%= parseInt(dato.carga_importe,10) + parseInt(dato.carga_bono, 10) %><br>(CARGA : <%= dato.carga_importe %> - BONO : <%= dato.carga_bono %>)
                             <br><a onclick="abrirModal(29, <%=dato.id_operacion %>);"><h6 class="warning">(Ver Detalle)</h6></a>

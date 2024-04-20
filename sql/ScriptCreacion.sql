@@ -167,6 +167,21 @@ CREATE TABLE IF NOT EXISTS cliente_sesion
 );
 CREATE INDEX cliente_sesion_id_cliente ON cliente_sesion (id_cliente);
 
+DROP TABLE IF EXISTS cliente_chat;
+CREATE TABLE IF NOT EXISTS cliente_chat
+(
+    id_cliente_chat serial NOT NULL,
+    id_cliente integer NOT NULL,
+    mensaje character varying(200) NOT NULL DEFAULT '',
+    fecha_hora_creacion timestamp NOT NULL,
+    enviado_cliente boolean NOT NULL DEFAULT true,
+    visto_cliente boolean NOT NULL DEFAULT false,
+    visto_operador boolean NOT NULL DEFAULT false,
+    id_usuario integer NOT NULL DEFAULT 1,
+    PRIMARY KEY (id_cliente_chat)
+);
+CREATE INDEX cliente_chat_id_cliente ON cliente_chat (id_cliente);
+
 DROP TABLE IF EXISTS operacion;
 CREATE TABLE IF NOT EXISTS operacion
 (
@@ -809,6 +824,111 @@ BEGIN
 	WHERE id_cliente = in_id_cliente;
 END;
 $$ LANGUAGE plpgsql;
+
+--DROP FUNCTION Obtener_Cliente_Chat(in_id_cliente INTEGER, in_es_cliente BOOLEAN)
+CREATE OR REPLACE FUNCTION Obtener_Cliente_Chat(in_id_cliente INTEGER, in_es_cliente BOOLEAN)
+RETURNS TABLE (id_cliente_chat INTEGER,
+			   id_cliente INTEGER,
+			   mensaje VARCHAR(200), 
+			   fecha_hora_creacion TIMESTAMP, 
+			   enviado_cliente BOOLEAN, 
+			   visto_cliente BOOLEAN, 
+			   visto_operador BOOLEAN,
+			   id_usuario INTEGER,
+			   usuario VARCHAR(100)) AS $$
+BEGIN
+	IF (in_es_cliente) THEN
+		UPDATE cliente_chat
+		SET visto_cliente = true
+		WHERE cliente_chat.id_cliente = in_id_cliente
+		AND cliente_chat.visto_cliente = false;
+	ELSE
+		UPDATE cliente_chat
+		SET visto_operador = true
+		WHERE cliente_chat.id_cliente = in_id_cliente
+		AND cliente_chat.visto_operador = false;
+	END IF;
+	
+	RETURN QUERY SELECT clc.id_cliente_chat,
+						clc.id_cliente, 
+						clc.mensaje, 
+						clc.fecha_hora_creacion, 
+						clc.enviado_cliente, 
+						clc.visto_cliente, 
+						clc.visto_operador,
+						clc.id_usuario,
+						u.usuario
+	FROM cliente_chat clc JOIN usuario u
+			ON (clc.id_usuario = u.id_usuario)
+	WHERE clc.id_cliente = in_id_cliente
+	ORDER BY clc.id_cliente_chat;
+END;
+$$ LANGUAGE plpgsql;
+/*select id_cliente_chat,id_cliente, mensaje, 
+		TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY') as fecha_mensaje,
+		TO_CHAR(fecha_hora_creacion, 'HH24:MI') as horario_mensaje, 
+		enviado_cliente, visto_cliente, 
+		visto_operador, id_usuario, usuario, 
+		TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY') = LAG(TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY')) 
+			OVER (ORDER BY id_cliente_chat) AS misma_fecha 
+from Obtener_Cliente_Chat(1, true);*/
+
+--DROP FUNCTION Insertar_Cliente_Chat(in_id_cliente INTEGER, in_es_cliente BOOLEAN, in_mensaje VARCHAR(200), in_id_usuario INTEGER)
+CREATE OR REPLACE FUNCTION Insertar_Cliente_Chat(in_id_cliente INTEGER, in_es_cliente BOOLEAN, in_mensaje VARCHAR(200), in_id_usuario INTEGER)
+RETURNS TABLE (id_cliente_chat INTEGER,
+			   id_cliente INTEGER,
+			   cliente_usuario VARCHAR(200), 
+			   en_sesion BOOLEAN,
+			   mensaje VARCHAR(200), 
+			   fecha_hora_creacion TIMESTAMP, 
+			   enviado_cliente BOOLEAN, 
+			   visto_cliente BOOLEAN, 
+			   visto_operador BOOLEAN,
+			   id_usuario INTEGER,
+			   usuario VARCHAR(100)) AS $$
+DECLARE
+    aux_visto_operador BOOLEAN;
+BEGIN
+	IF (in_es_cliente) THEN
+		UPDATE cliente_chat
+		SET visto_cliente = true
+		WHERE cliente_chat.id_cliente = in_id_cliente
+		AND cliente_chat.visto_cliente = false;
+		
+		aux_visto_operador := false;
+	ELSE
+		UPDATE cliente_chat
+		SET visto_operador = true
+		WHERE cliente_chat.id_cliente = in_id_cliente
+		AND cliente_chat.visto_operador = false;
+		
+		aux_visto_operador := true;
+	END IF;
+	
+	INSERT INTO cliente_chat (id_cliente, mensaje, fecha_hora_creacion, enviado_cliente, visto_cliente, visto_operador, id_usuario)
+	VALUES (in_id_cliente, in_mensaje, NOW(), in_es_cliente, in_es_cliente, aux_visto_operador, in_id_usuario);
+	
+	RETURN QUERY SELECT clc.id_cliente_chat,
+						clc.id_cliente, 
+						cl.cliente_usuario,
+						cl.en_sesion,
+						clc.mensaje, 
+						clc.fecha_hora_creacion, 
+						clc.enviado_cliente, 
+						clc.visto_cliente, 
+						clc.visto_operador,
+						clc.id_usuario,
+						u.usuario
+	FROM cliente_chat clc JOIN cliente cl
+			ON (clc.id_cliente = cl.id_cliente)
+		JOIN usuario u
+			ON (clc.id_usuario = u.id_usuario)
+	WHERE clc.id_cliente = in_id_cliente
+	ORDER BY clc.id_cliente_chat;
+END;
+$$ LANGUAGE plpgsql;
+--select * from Insertar_Cliente_Chat(1, true, 'prueba mensaje 4 desde cliente', 1);
+--select * from Insertar_Cliente_Chat(1, false, 'prueba mensaje 3 desde operador', 3);
 
 --------------Vistas de Monitoreo y Gestión---------------------
 --(excepto v_Cuenta_Bancaria_Activa)

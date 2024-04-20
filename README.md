@@ -16,3 +16,4 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser <br>
 
 npm init
 npm install express bcrypt body-parser express-session pg connect-pg-simple ip ejs axios
+npm install ws

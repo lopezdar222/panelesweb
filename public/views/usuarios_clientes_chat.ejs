@@ -1,43 +1,51 @@
-<html>
-    <head>
-        <h1><%= title %></h1>
-    </head>
-    <body>
-        <%if (message === 'ok') {%>
-            <br>
-            <label for="textoMensaje"><h3>Escribir Mensaje:</h3></label>
-            <input type="text" id="textoMensaje" value="">
-            <button onclick="mensaje_Usuario_Cliente(<%= id_operador %>, <%= id_cliente_usuario %>, <%= id_usuario %>);">Enviar</button>
-            <div id="msgResultado"></div>
-            <br>
-            <table width="100%">
-                <thead>
-                    <tr>
-                        <th>Bot</th>
-                        <th>Fecha/Hora</th>
-                        <th>Mensaje Cliente</th>
-                        <th>Mensaje Operador</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% datos_usuario.forEach(function(dato) { %>
-                        <tr>
-                            <td><%= dato.numero_telefono %></td>
-                            <td><%= dato.fecha_hora %></td>
-                            <% if (dato.desde_usuario == true) { %>
-                                <td><%= dato.mensaje %></td>
-                                <td></td>
-                            <% } else { %>
-                                <td></td>
-                                <td><%= dato.mensaje %> (<%= dato.usuario %>)</td>
-                            <% } %>
-                        </tr>
-                    <% }); %>
-                </tbody>
-            </table>
-        <%} else {%>
-            <h3><%= message %></h3>
-        <%} %>
-        <button onclick="cerrarModal();">Finalizar</button>
-    </body>
-</html>
+<body>
+    <%if (message === 'ok') {%>
+        <h3><%= title %></h3>
+        <%if (en_sesion) {%>
+            <h6 class="success">Está en Línea</h6>
+        <% } else {%>
+            <h6 class="warning">No está en Línea</h6>
+        <% } %>
+        <div id="chat-window">
+            <div id="chat-messages">
+                <% datos.forEach(linea => { %>
+                    <%if (!linea.misma_fecha) {%>
+                        <div class="date-divider"><%= linea.fecha_mensaje %></div>
+                    <% } %>
+                    <%if (linea.enviado_cliente) {%>
+                        <div class="message other">
+                            <div class="message-content"><%= linea.mensaje %></div>
+                            <div class="message-time"><%= linea.horario_mensaje %></div>
+                        </div>
+                    <% } else {%>
+                        <div class="message self">
+                            <div class="message-content"><%= linea.mensaje %></div>
+                            <div class="message-time"><%= linea.horario_mensaje %></div>
+                        </div>
+                    <% } %>
+                <% }); %>
+                <!-- Los mensajes del otro usuario se mostrarán aquí -->
+                <!--div class="message other">
+                    <div class="message-content">Mensaje del otro usuario</div>
+                    <div class="message-time">12:34 PM</div>
+                </div-->
+                <!-- Los mensajes del usuario actual se mostrarán aquí -->
+                <!--div class="message self">
+                    <div class="message-content">Mensaje del usuario actual</div>
+                    <div class="message-time">2:00 PM</div>
+                </div-->
+                <!--div class="date-divider">Hoy</div-->
+            </div>
+            <div>
+                <textarea id="message-input" placeholder="Tu mensaje aquí..." rows="2" cols="70" maxlength="200"></textarea>
+            </div>
+            <div id="input-area">
+                <button id="attach-button" onclick="document.getElementById('file-input').click();">Adjuntar</button>
+                <button id="send-button" onclick="cargarContenidoChats(<%=id_cliente%>, document.getElementById('message-input').value);">Enviar</button>
+                <input type="file" id="file-input" style="display: none;">
+            </div>
+        </div>
+    <%} else {%>
+        <h3><%= title %></h3>
+    <%} %>
+    <button onclick="cerrarModal();">Finalizar</button>
