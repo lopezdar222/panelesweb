@@ -31,6 +31,7 @@ let paginaActual = 1;
 let datos = [];
 let datosOriginales = [];
 let paginacionActual = 1;
+let ws = null;
 
 // Función para cargar el contenido dinámico desde el servidor
 function cargarContenido(url) {
@@ -105,6 +106,7 @@ function cargarContenidoChats(id_cliente, mensaje) {
             chatMessages.scrollTop = chatMessages.scrollHeight;
             document.getElementById('message-input').value = '';
         })
+        .then(enviarMensaje('chat', id_cliente))
         .catch(error => {
             console.error('Error:', error);
         });
@@ -1016,6 +1018,7 @@ const rechazar_Cobro = async (id_operacion) => {
     }
 };
 
+
 document.addEventListener('DOMContentLoaded', async (req, res) => {
     // Obtener los parámetros de la URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -1148,18 +1151,39 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                 fetch(url_ultima_invocada);
                 window.location.href = `/`;
             });
+            //Inicializar cliente Websocket********************************/
+            ws = new WebSocket('wss://paneleslanding.com:8080');
+
+            ws.onopen = function(event) {
+                enviarMensaje('', 0);
+            };
+
+            // Evento cuando se recibe un mensaje del servidor
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                console.log(data.alerta);
+                // Aquí puedes manipular el mensaje recibido, por ejemplo, mostrarlo en la página
+            };
+            /******************************************************************/
 
             // Carga el menú de actividad de clientes al inicio:
             url_ultima_invocada = `/monitoreo_landingweb?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
             cargarContenido(url_ultima_invocada);
-        }       
-
+        }
     } catch (error) {
         window.location.href = `../index.html`;
     }
 });
 
-
+function enviarMensaje(mensaje, id_cliente) {
+    const message = { 
+                es_cliente: 0,
+                ws_cliente: id_usuario,
+                id_cliente : id_cliente,
+                alerta : mensaje
+    };
+    ws.send(JSON.stringify(message));
+}
 /*********************Búsqueda en Tablas***************************/
 function obtenerDatosTabla(tabla) {
     datos = [];

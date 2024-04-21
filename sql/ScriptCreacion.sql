@@ -343,43 +343,64 @@ RETURNS TABLE (id_cliente INTEGER) AS $$
 DECLARE
     aux_id_cliente INTEGER;
     aux_id_agente INTEGER;
+    aux_bloqueado BOOLEAN;
 BEGIN
-	IF EXISTS (SELECT 1
-			  	FROM cliente cl join agente ag 
-			   		ON (cl.id_agente = ag.id_agente
-			   			AND cl.cliente_usuario = in_usuario
-			   			AND ag.agente_usuario = in_agente))
-	THEN
-		SELECT cl.id_cliente, ag.id_agente
-		INTO aux_id_cliente, aux_id_agente
-		FROM cliente cl join agente ag 
-			ON (cl.id_agente = ag.id_agente
-				AND cl.cliente_usuario = in_usuario
-				AND ag.agente_usuario = in_agente);
-				
-		UPDATE cliente
-		SET cliente_password = in_password,
-			en_sesion = true
-		WHERE cliente.id_cliente = aux_id_cliente;
-	ELSE 
-		SELECT id_agente
-		INTO aux_id_agente
-		FROM agente
-		WHERE agente_usuario = in_agente;	
+	IF NOT EXISTS (SELECT 1
+					FROM cliente_sesion cls join cliente cl 
+						ON (cls.id_cliente = cl.id_cliente
+							AND cls.ip = in_ip
+							AND cl.bloqueado = true))
+	THEN 
 	
-		INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-		VALUES (in_usuario, in_password, aux_id_agente, true, false, now(), 1,  now(), 1)
-		RETURNING cliente.id_cliente INTO aux_id_cliente;	
+		IF EXISTS (SELECT 1
+					FROM cliente cl join agente ag 
+						ON (cl.id_agente = ag.id_agente
+							AND cl.cliente_usuario = in_usuario
+							AND ag.agente_usuario = in_agente))
+		THEN
+		
+			SELECT cl.id_cliente, cl.bloqueado, ag.id_agente
+			INTO aux_id_cliente, aux_bloqueado, aux_id_agente
+			FROM cliente cl join agente ag 
+				ON (cl.id_agente = ag.id_agente
+					AND cl.cliente_usuario = in_usuario
+					AND ag.agente_usuario = in_agente);
+					
+			IF (aux_bloqueado) THEN
+				aux_id_cliente := -1;
+			ELSE			
+				UPDATE cliente
+				SET cliente_password = in_password,
+					en_sesion = true
+				WHERE cliente.id_cliente = aux_id_cliente;
+			END IF;
+			
+		ELSE 
+		
+			SELECT id_agente
+			INTO aux_id_agente
+			FROM agente
+			WHERE agente_usuario = in_agente;	
+
+			INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+			VALUES (in_usuario, in_password, aux_id_agente, true, false, now(), 1,  now(), 1)
+			RETURNING cliente.id_cliente INTO aux_id_cliente;
+			
+		END IF;
+
+		IF (aux_id_cliente > 0) THEN
+			UPDATE cliente_sesion
+			SET cierre_abrupto = true,
+				fecha_hora_cierre = now()
+			WHERE cliente_sesion.id_cliente = aux_id_cliente
+				AND cliente_sesion.fecha_hora_cierre IS NULL;
+
+			INSERT INTO cliente_sesion (id_cliente, id_token, ip, fecha_hora_creacion, monto, moneda)
+			VALUES (aux_id_cliente, in_id_token, in_ip, now(), in_monto, in_moneda);
+		END IF;
+	ELSE
+		aux_id_cliente := -2;
 	END IF;
-
-	UPDATE cliente_sesion
-	SET cierre_abrupto = true,
-		fecha_hora_cierre = now()
-	WHERE cliente_sesion.id_cliente = aux_id_cliente
-		AND cliente_sesion.fecha_hora_cierre IS NULL;
-
-	INSERT INTO cliente_sesion (id_cliente, id_token, ip, fecha_hora_creacion, monto, moneda)
-	VALUES (aux_id_cliente, in_id_token, in_ip, now(), in_monto, in_moneda);
 	
 	RETURN QUERY SELECT aux_id_cliente;
 END;
@@ -451,7 +472,11 @@ BEGIN
 	UPDATE 	cliente_sesion
 	SET 	fecha_hora_cierre = now()
 	WHERE	id_cliente = in_id_cliente
-			AND id_token = in_id_token;		
+			AND id_token = in_id_token;
+	
+	UPDATE 	cliente
+	SET		en_sesion = false
+	WHERE 	id_cliente = in_id_cliente;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -928,7 +953,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 --select * from Insertar_Cliente_Chat(1, true, 'prueba mensaje 4 desde cliente', 1);
---select * from Insertar_Cliente_Chat(1, false, 'prueba mensaje 3 desde operador', 3);
+--select * from Insertar_Cliente_Chat(1, false, 'prueba mensaje 4 desde operador', 3);
 
 --------------Vistas de Monitoreo y Gestión---------------------
 --(excepto v_Cuenta_Bancaria_Activa)
@@ -1190,6 +1215,8 @@ GROUP BY cl.id_cliente,
 		ag.id_oficina,
 		ofi.oficina;
 --select * from v_Clientes order by ult_operacion desc
+
+select * from v_Console_Logs
 
 select * from cliente
 select * from agente

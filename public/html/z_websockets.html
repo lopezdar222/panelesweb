@@ -4,39 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cliente WebSocket</title>
+    <textarea id="mensaje-cliente">
+    </textarea>
+    <button onclick="enviarMensaje();"> Mandar mensaje </button>
 </head>
 <body>
     <script>
         const ws = new WebSocket('ws://localhost:8080');
+        const es_cliente = 0;
+        const id_cliente = 3;
+        let id_token = '';
 
         // Evento cuando se recibe un mensaje del servidor
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            console.log('Mensaje recibido del servidor:', data);
-                // Aquí puedes manipular el mensaje recibido, por ejemplo, mostrarlo en la página
+            console.log('Mensaje recibido del servidor:', data.content);
+            // Aquí puedes manipular el mensaje recibido, por ejemplo, mostrarlo en la página
         };
 
         ws.onopen = function(event) {
             console.log('Conexión establecida con el servidor');
             const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
             const length = 30;
-            let token = '';
             let indice = 0;
             for (let i = 0; i < length; i++) {
                 indice = Math.floor(Math.random() * caracteres.length);
-                token += caracteres.charAt(indice);
+                id_token += caracteres.charAt(indice);
             }
-            const mensaje = 'Soy el cliente con token ' + token;
-            console.log('token:');
-            console.log(token);
 
             const message = { 
-                        type: 'mensaje',
-                        content: mensaje
+                        id_token: id_token,
+                        es_cliente: es_cliente,
+                        id_cliente: id_cliente,
+                        mensaje : ''
             };
             // Enviar un mensaje al servidor
             ws.send(JSON.stringify(message));
         };
+
+        function enviarMensaje() {
+            const mens = document.getElementById('mensaje-cliente').value;
+            const message = { 
+                        id_token: id_token,
+                        es_cliente: es_cliente,
+                        id_cliente: id_cliente,
+                        mensaje : mens
+            };
+            ws.send(JSON.stringify(message));
+        }
     </script>
 </body>
 </html>
