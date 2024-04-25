@@ -37,6 +37,9 @@
                         <td><%= dato.cliente_usuario %></td>
                         <td><button class="botones" onclick="abrirModal(24, <%=dato.id_cliente %>);">
                                 <span class="material-symbols-outlined">history</span>
+                                <% if (dato.visto_operador == 0) { %>
+                                    <h3 class="warning">!!!</h3>
+                                <% } %>
                             </button>
                         </td>
                         <td><button class="botones"  onclick="abrirModal(25, <%=dato.id_cliente %>);">

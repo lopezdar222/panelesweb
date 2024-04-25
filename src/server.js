@@ -117,7 +117,9 @@ app.get('/usuarios_clientes', async (req, res) => {
                                 `id_plataforma,` +
                                 `plataforma, ` +
                                 `id_oficina,` +
-                                `oficina ` +
+                                `oficina,` +
+                                `visto_cliente,` +
+                                `visto_operador ` +
                         `from v_Clientes`;
         if (result.rows[0].id_rol > 1) {
             query2 = query2 + ` where id_oficina = ${id_oficina}`;
@@ -1005,6 +1007,22 @@ app.get('/monitoreo_landingweb_detalle', async (req, res) => {
 });
 
 // Páginas Generales
+app.post('/alerta_usuarios_clientes/:id_cliente/:id_usuario', async (req, res) => {
+    try {
+        let { id_cliente, id_usuario } = req.params;
+        const query = `select id_cliente from Alerta_Cliente_Usuario(${id_cliente}, ${id_usuario})`;
+        const result = await db.handlerSQL(query);
+        result.rows[0].id_cliente;
+        if (result.rows[0].id_cliente > 0) {
+            res.status(201).json({ message: `ok`});
+        } else {
+            res.status(201).json({ message: `nook`});
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'error' });
+    }
+});
+
 app.post('/cargar_retiro_manual/:id_cliente/:id_usuario/:monto_importe/:cbu/:titular/:observacion', async (req, res) => {
     try {
         let { id_cliente, id_usuario, monto_importe, cbu, titular, observacion } = req.params;

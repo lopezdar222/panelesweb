@@ -955,6 +955,32 @@ $$ LANGUAGE plpgsql;
 --select * from Insertar_Cliente_Chat(1, true, 'prueba mensaje 4 desde cliente', 1);
 --select * from Insertar_Cliente_Chat(1, false, 'prueba mensaje 4 desde operador', 3);
 
+--DROP FUNCTION Alerta_Cliente_Usuario(in_id_cliente INTEGER, in_id_usuario INTEGER)
+CREATE OR REPLACE FUNCTION Alerta_Cliente_Usuario(in_id_cliente INTEGER, in_id_usuario INTEGER)
+RETURNS TABLE (id_cliente INTEGER) AS $$
+DECLARE
+    aux_id_cliente INTEGER;
+BEGIN
+	aux_id_cliente := 0;
+
+	SELECT cl.id_cliente
+	INTO aux_id_cliente		
+	FROM cliente cl JOIN agente ag
+			ON (cl.id_agente = ag.id_agente
+				AND cl.id_cliente = in_id_cliente)
+		JOIN oficina o
+			ON (ag.id_oficina = o.id_oficina)
+		JOIN usuario u
+			ON (u.id_usuario = in_id_usuario 
+				AND (u.id_rol = 1 
+					 OR
+					 o.id_oficina = u.id_oficina))
+	LIMIT 1;
+	RETURN QUERY SELECT aux_id_cliente;
+END;
+$$ LANGUAGE plpgsql;
+--SELECT * FROM Alerta_Cliente_Usuario(1,5)
+
 --------------Vistas de Monitoreo y Gestión---------------------
 --(excepto v_Cuenta_Bancaria_Activa)
 --DROP VIEW v_Console_Logs;
@@ -1193,15 +1219,35 @@ SELECT 	cl.id_cliente,
 		pla.plataforma,
 		ag.id_oficina,
 		ofi.oficina,
-		COALESCE(MAX(ope.id_operacion), 100000000) as ult_operacion
+		COALESCE(ope.ult_operacion, '2000-01-01') 	as ult_operacion,
+		COALESCE(ope.visto_cliente, 1)				as visto_cliente,
+		COALESCE(ope.visto_operador, 1)			as visto_operador
 FROM cliente cl JOIN agente ag
 			ON (cl.id_agente = ag.id_agente)
 		JOIN oficina ofi
 			ON (ag.id_oficina = ofi.id_oficina)
 		JOIN plataforma pla
 			ON (ag.id_plataforma = pla.id_plataforma)
-		LEFT JOIN operacion ope
-			ON (ope.id_cliente = cl.id_cliente)
+		LEFT JOIN (SELECT	id_cliente,
+							MIN(visto_cliente::int) AS visto_cliente,
+							MIN(visto_operador::int) AS visto_operador,
+							MAX(ult_operacion) AS ult_operacion
+					FROM
+						(SELECT 	id_cliente,
+								MIN(visto_cliente::int) AS visto_cliente,
+								MIN(visto_operador::int) AS visto_operador,
+								MAX(fecha_hora_creacion) AS ult_operacion
+						FROM cliente_chat 
+						GROUP BY id_cliente
+						UNION
+						SELECT 	id_cliente,
+								1 AS visto_cliente,
+								1 AS visto_operador,
+								MAX(fecha_hora_creacion) AS ult_operacion
+						FROM operacion
+						GROUP BY id_cliente) operacion
+					GROUP BY id_cliente) ope
+			ON (cl.id_cliente = ope.id_cliente)
 WHERE cl.marca_baja = false
 GROUP BY cl.id_cliente,
 		cl.cliente_usuario,
@@ -1213,8 +1259,33 @@ GROUP BY cl.id_cliente,
 		ag.id_plataforma,
 		pla.plataforma,
 		ag.id_oficina,
-		ofi.oficina;
+		ofi.oficina,
+		ope.ult_operacion,
+		ope.visto_cliente,
+		ope.visto_operador;
 --select * from v_Clientes order by ult_operacion desc
+
+SELECT	id_cliente,
+		MIN(visto_cliente::int) AS visto_cliente,
+		MIN(visto_operador::int) AS visto_operador,
+		MAX(ult_operacion) AS ult_operacion
+FROM
+	(SELECT 	id_cliente,
+			MIN(visto_cliente::int) AS visto_cliente,
+			MIN(visto_operador::int) AS visto_operador,
+			MAX(fecha_hora_creacion) AS ult_operacion
+	FROM cliente_chat 
+	GROUP BY id_cliente
+	UNION
+	SELECT 	id_cliente,
+			1 AS visto_cliente,
+			1 AS visto_operador,
+			MAX(fecha_hora_creacion) AS ult_operacion
+	FROM operacion
+	GROUP BY id_cliente) operacion
+GROUP BY id_cliente;
+
+select * from operacion
 
 select * from v_Console_Logs
 

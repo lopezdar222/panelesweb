@@ -1028,6 +1028,23 @@ const rechazar_Cobro = async (id_operacion) => {
     }
 };
 
+const actualizarAlertaUsuariosClientes = async (id_cliente) => {
+    const msgResultado = document.getElementById('alerta_usuarios_clientes');
+    try {
+        const response = await fetch(`/alerta_usuarios_clientes/${id_cliente}/${id_usuario}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        const data = await response.json();
+        alert("Nuevo Mensaje sin leer");
+        if (data.message == 'ok') {
+            msgResultado.innerHTML = '<h3 class="warning">!!!</h3>';
+        }
+    } catch (error) {
+        msgResultado.innerHTML = '<h3 class="warning">error en alerta</h3>';
+    }
+};
 
 document.addEventListener('DOMContentLoaded', async (req, res) => {
     // Obtener los parámetros de la URL
@@ -1137,6 +1154,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                 event.preventDefault();
                 url_ultima_invocada = `${this.getAttribute('href')}?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
                 cargarContenido(url_ultima_invocada);
+                document.getElementById('alerta_usuarios_clientes').innerHTML = '';
             });
 
             // Obtén el modal y el botón para cerrar el modal
@@ -1178,6 +1196,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                         //alert('Actualizar Chats');
                         cargarContenidoChats(id_cliente, '', true); 
                     }
+                    actualizarAlertaUsuariosClientes(data.id_cliente);
                 }
             };
             /******************************************************************/
