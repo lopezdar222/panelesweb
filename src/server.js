@@ -1052,19 +1052,19 @@ app.post('/cargar_retiro_manual/:id_cliente/:id_usuario/:monto_importe/:cbu/:tit
             const result3 = await db.handlerSQL(query3);
             const codigo_operacion = result3.rows[0].codigo_operacion;
             if (codigo_operacion != 0) {
-                res.status(201).json({ message: `Retiro Registrado con Éxito! Código de Operación: ${codigo_operacion}`});
+                res.status(201).json({ codigo: 1 , message: `Retiro Registrado con Éxito! Código de Operación: ${codigo_operacion}`});
             } else {
-                res.status(201).json({ message: `Error en la Operación de Retiro!`});
+                res.status(201).json({ codigo: 2 , message: `Error en la Operación de Retiro!`});
             }
         } else if (resultado === 'error') {
-            res.status(500).json({ message: 'Error al Retirar Fichas' });
+            res.status(500).json({ codigo: 3 , message: 'Error al Retirar Fichas' });
         } else if (resultado === 'en_espera') {
-            res.status(500).json({ message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
+            res.status(500).json({ codigo: 4 , message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
         } else if (resultado === 'faltante') {
-            res.status(201).json({ message: 'Saldo Insuficiente!' });
+            res.status(201).json({ codigo: 5 , message: 'Saldo Insuficiente!' });
         }   
     } catch (error) {
-        res.status(500).json({ message: 'Error al Registrar Retiro!' });
+        res.status(500).json({ codigo: 6 , message: 'Error al Registrar Retiro!' });
     }
 });
 
@@ -1262,11 +1262,11 @@ app.post('/cargar_cobro/:id_operacion/:id_usuario/:monto/:bono/:id_cuenta_bancar
         {
             const query2 = `select * from Modificar_Cliente_Carga(${id_operacion}, 2, ${monto_carga}, ${monto_bono}, ${id_cuenta_bancaria}, ${id_usuario})`;
             await db.handlerSQL(query2);
-            res.status(201).json({ message: `Carga de Fichas Registrada Exitosamente!` });
+            res.status(201).json({ codigo : 1, message: `Carga de Fichas Registrada Exitosamente!` });
         } else if (resultado === 'error') {
-            res.status(500).json({ message: 'Error al Cargar Fichas' });
+            res.status(500).json({ codigo : 2, message: 'Error al Cargar Fichas' });
         } else if (resultado === 'en_espera') {
-            res.status(500).json({ message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
+            res.status(500).json({ codigo : 3, message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
         }
     } catch (error) {
         res.status(500).json({ message: 'Error al Cargar Cobro' });
@@ -1278,9 +1278,9 @@ app.post('/rechazar_cobro/:id_operacion/:id_usuario', async (req, res) => {
         const { id_operacion, id_usuario } = req.params;
         const query2 = `select * from Modificar_Cliente_Carga(${id_operacion}, 3, 0, 0, 0, ${id_usuario})`;
         await db.handlerSQL(query2);
-        res.status(201).json({ message: `Cobro Rechazado Exitosamente.` });
+        res.status(201).json({ codigo : 1, message: `Cobro Rechazado Exitosamente.` });
     } catch (error) {
-        res.status(500).json({ message: 'Error al Rechazar Cobro.' });
+        res.status(500).json({ codigo : 2, message: 'Error al Rechazar Cobro.' });
     }
 });
 
@@ -1289,9 +1289,9 @@ app.post('/rechazar_retiro/:id_operacion/:id_usuario', async (req, res) => {
         const { id_operacion, id_usuario } = req.params;
         const query2 = `select * from Modificar_Cliente_Retiro(${id_operacion}, 3, 0, ${id_usuario})`;
         await db.handlerSQL(query2);
-        res.status(201).json({ message: `Retiro Rechazado Exitosamente.` });
+        res.status(201).json({ codigo : 1, message: `Retiro Rechazado Exitosamente.` });
     } catch (error) {
-        res.status(500).json({ message: 'Error al Rechazar Retiro de Fichas.' });
+        res.status(500).json({ codigo : 2, message: 'Error al Rechazar Retiro de Fichas.' });
     }
 });
 

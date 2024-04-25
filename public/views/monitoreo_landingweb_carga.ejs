@@ -78,8 +78,8 @@
             <h3 class="warning">¡Al realizar esta acción, no habrá opción de Deshacer!</h3>
         </div>
         <div id="msgResultado" class="container">
-            <button onclick="cargar_Cobro(<%=datos[0].id_operacion %>);">Aceptar</button>
-            <button onclick="rechazar_Cobro(<%=datos[0].id_operacion %>);">Rechazar</button>
+            <button onclick="cargar_Cobro(<%=datos[0].id_operacion %>, <%=datos[0].id_cliente %>);">Aceptar</button>
+            <button onclick="rechazar_Cobro(<%=datos[0].id_operacion %>, <%=datos[0].id_cliente %>);">Rechazar</button>
         </div>
     <%} else {%>
         <h3><%= message %></h3>

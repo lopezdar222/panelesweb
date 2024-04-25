@@ -66,10 +66,10 @@
         </div>
         <div class="container">
             <div id="msgResultado" class="column">
-                <button onclick="cargar_Retiro(<%=datos[0].id_operacion %>);">Aceptar</button>
+                <button onclick="cargar_Retiro(<%=datos[0].id_operacion %>, <%=datos[0].id_cliente %>);">Aceptar</button>
             </div>
             <div id="btnRechazar" class="column">
-                <button onclick="rechazar_Retiro(<%=datos[0].id_operacion %>);">Rechazar</button>
+                <button onclick="rechazar_Retiro(<%=datos[0].id_operacion %>, <%=datos[0].id_cliente %>);">Rechazar</button>
             </div>
         </div>
     <%} else {%>

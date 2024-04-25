@@ -804,7 +804,7 @@ const crear_Cuenta_Cobro = async (id_oficina) => {
     }
 };
 
-const cargar_Retiro = async (id_operacion) => {
+const cargar_Retiro = async (id_operacion, id_cliente) => {
     if (cargando_retiro === 1) {
         alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
         return;
@@ -829,6 +829,9 @@ const cargar_Retiro = async (id_operacion) => {
         msgResultado.innerHTML = data.message;
         if (data.message != 'Saldo Insuficiente!') {
             btnRechazar.innerHTML = '';
+        }
+        if (data.codigo == 1) {
+            enviarMensaje('sol_retiro_aceptada', id_cliente);
         }
         cargando_retiro = 0;
     } catch (error) {
@@ -882,6 +885,9 @@ const cargar_Retiro_Manual = async (id_cliente) => {
         });
         const data = await response.json();
         msgResultado.innerHTML = data.message;
+        if (data.codigo == 1) {
+            enviarMensaje('sol_carga_aceptada', id_cliente);
+        }
         cargando_retiro_manual = 0;
     } catch (error) {
         cargando_retiro_manual = 0;
@@ -936,6 +942,7 @@ const cargar_Cobro_Manual = async (id_cliente) => {
         });
         const data = await response.json();
         msgResultado.innerHTML = data.message;
+        enviarMensaje('sol_carga_aceptada', id_cliente);
         cargando_cobro_manual = 0;
     } catch (error) {
         cargando_cobro_manual = 0;
@@ -943,7 +950,7 @@ const cargar_Cobro_Manual = async (id_cliente) => {
     }
 };
 
-const cargar_Cobro = async (id_operacion) => {
+const cargar_Cobro = async (id_operacion, id_cliente) => {
     if (cargando_cobro === 1) {
         alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
         return;
@@ -973,6 +980,9 @@ const cargar_Cobro = async (id_operacion) => {
         });
         const data = await response.json();
         msgResultado.innerHTML = data.message;
+        if (data.codigo == 1) {
+            enviarMensaje('sol_carga_aceptada', id_cliente);
+        }
         cargando_cobro = 0;
     } catch (error) {
         cargando_cobro = 0;
@@ -980,7 +990,7 @@ const cargar_Cobro = async (id_operacion) => {
     }
 };
 
-const rechazar_Retiro = async (id_operacion) => {
+const rechazar_Retiro = async (id_operacion, id_cliente) => {
     if (rechazando_retiro === 1) {
         alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
         return;
@@ -998,6 +1008,9 @@ const rechazar_Retiro = async (id_operacion) => {
         const data = await response.json();
         msgResultado.innerHTML = data.message;
         btnRechazar.innerHTML = '';
+        if (data.codigo == 1) {
+            enviarMensaje('sol_retiro_rechazada', id_cliente);
+        }
         rechazando_retiro = 0;
     } catch (error) {
         rechazando_retiro = 0;
@@ -1005,7 +1018,7 @@ const rechazar_Retiro = async (id_operacion) => {
     }
 };
 
-const rechazar_Cobro = async (id_operacion) => {
+const rechazar_Cobro = async (id_operacion, id_cliente) => {
     if (rechazando_cobro === 1) {
         alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
         return;
@@ -1021,6 +1034,9 @@ const rechazar_Cobro = async (id_operacion) => {
         });
         const data = await response.json();
         msgResultado.innerHTML = data.message;
+        if (data.codigo == 1) {
+            enviarMensaje('sol_carga_rechazada', id_cliente);
+        }
         rechazando_cobro = 0;
     } catch (error) {
         rechazando_cobro = 0;
@@ -1037,7 +1053,6 @@ const actualizarAlertaUsuariosClientes = async (id_cliente) => {
                 'Content-Type': 'application/json'}
         });
         const data = await response.json();
-        alert("Nuevo Mensaje sin leer");
         if (data.message == 'ok') {
             msgResultado.innerHTML = '<h3 class="warning">!!!</h3>';
         }
