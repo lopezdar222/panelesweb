@@ -1,6 +1,7 @@
 let id_usuario = 0;
 let id_token = '';
 let id_rol = 0;
+let id_cliente = 0;
 let abriendo_sesion_bot = 0;
 let bajando_usuario_cliente = 0;
 let modificando_estado_cuenta_usuario_cliente = 0;
@@ -92,11 +93,15 @@ function cargarContenido(url) {
       });
 }
 
-
-function cargarContenidoChats(id_cliente, mensaje) {
-    if (mensaje != '') 
+function cargarContenidoChats(id_cliente, mensaje, alerta) {
+    if ((mensaje != '' || alerta) && document.getElementById("chat-messages")) 
     {
-        const mensaje_envio = mensaje.replace('/','<<');
+        let mensaje_envio = mensaje;
+        if (alerta) {
+            mensaje_envio = '';
+        } else {
+            mensaje_envio = mensaje_envio.replace('/','<<');
+        }
         const url = `/usuarios_clientes_chat_detalle?id_cliente=${encodeURIComponent(id_cliente)}&mensaje=${encodeURIComponent(mensaje_envio)}&id_usuario=${encodeURIComponent(id_usuario)}`;
         fetch(url)
         .then(response => response.text())
@@ -104,13 +109,18 @@ function cargarContenidoChats(id_cliente, mensaje) {
             const chatMessages = document.getElementById("chat-messages");
             chatMessages.innerHTML = data;
             chatMessages.scrollTop = chatMessages.scrollHeight;
-            document.getElementById('message-input').value = '';
+            if (!alerta) {
+                const texto_mensaje = document.getElementById('message-input');
+                texto_mensaje.value = '';
+                texto_mensaje.focus();
+                enviarMensaje('chat', id_cliente);
+            }
         })
-        .then(enviarMensaje('chat', id_cliente))
+        //.then(enviarMensaje('chat', id_cliente))
         .catch(error => {
             console.error('Error:', error);
         });
-    }
+    } 
 }
 
 function cargarContenidoModal(url) {
@@ -141,7 +151,6 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
     let id_cuenta_bancaria = '';
     let id_operacion = '';
     let id_oficina = '';
-    let id_cliente = '';
     let url = '';
     modal.style.display = 'block';
     switch (opcion)
@@ -245,9 +254,10 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
             cargarContenidoModal(url);
             break;
         case 24:
-            id_cliente = par1;
+            id_cliente = Number(par1);
             url = `/usuarios_clientes_chat?id_cliente=${encodeURIComponent(id_cliente)}`;
             cargarContenidoModal(url);
+            enviarMensaje('actualiza', id_cliente);
             break;
         case 25:
             id_cliente = par1;
@@ -1160,9 +1170,15 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
 
             // Evento cuando se recibe un mensaje del servidor
             ws.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                console.log(data.alerta);
                 // Aquí puedes manipular el mensaje recibido, por ejemplo, mostrarlo en la página
+                const data = JSON.parse(event.data);
+                //alert(`Alerta = ${data.alerta}`);
+                if (data.alerta == 'chat') { 
+                    if (id_cliente == data.id_cliente) {
+                        //alert('Actualizar Chats');
+                        cargarContenidoChats(id_cliente, '', true); 
+                    }
+                }
             };
             /******************************************************************/
 

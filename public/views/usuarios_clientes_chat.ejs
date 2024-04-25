@@ -24,24 +24,13 @@
                         </div>
                     <% } %>
                 <% }); %>
-                <!-- Los mensajes del otro usuario se mostrarán aquí -->
-                <!--div class="message other">
-                    <div class="message-content">Mensaje del otro usuario</div>
-                    <div class="message-time">12:34 PM</div>
-                </div-->
-                <!-- Los mensajes del usuario actual se mostrarán aquí -->
-                <!--div class="message self">
-                    <div class="message-content">Mensaje del usuario actual</div>
-                    <div class="message-time">2:00 PM</div>
-                </div-->
-                <!--div class="date-divider">Hoy</div-->
             </div>
             <div>
                 <textarea id="message-input" placeholder="Tu mensaje aquí..." rows="2" cols="70" maxlength="200"></textarea>
             </div>
             <div id="input-area">
                 <button id="attach-button" onclick="document.getElementById('file-input').click();">Adjuntar</button>
-                <button id="send-button" onclick="cargarContenidoChats(<%=id_cliente%>, document.getElementById('message-input').value);">Enviar</button>
+                <button id="send-button" onclick="cargarContenidoChats(<%=id_cliente%>, document.getElementById('message-input').value, false);">Enviar</button>
                 <input type="file" id="file-input" style="display: none;">
             </div>
         </div>

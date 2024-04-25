@@ -7,9 +7,6 @@ const db = require(__dirname + '/db');
 const ejs = require('ejs');
 const axios = require('axios');
 const { Console } = require('console');
-const https = require('https');
-const WebSocket = require('ws');
-const fs = require('fs');
 ///////////////////////////////////////////////////////////////////////////////
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,69 +33,6 @@ app.use(session({
     resave: false,
     saveUninitialized: true
 }));
-
-//*********************WEBSOCKETS***********************/
-const server = https.createServer({
-    cert: fs.readFileSync(path.join(__dirname, '../ssl/certificado.crt')), // Ruta al certificado SSL
-    key: fs.readFileSync(path.join(__dirname, '../ssl/clave_privada.key')) // Ruta a la clave privada
-});
-
-const wss = new WebSocket.Server({ server });
-
-server.listen(8080, function() {
-    db.insertLogMessage(`Servidor WebSocket HTTPS iniciado en el puerto 8080`);
-});
-
-// Array para almacenar las conexiones de los clientes
-const conexiones = [];
-
-// Evento cuando se establece una conexión con un cliente
-wss.on('connection', function connection(ws) {
-    // Evento cuando se recibe un mensaje del cliente
-    ws.on('message', function incoming(message) {
-        const data = JSON.parse(message);
-        let encontrado = false;
-        let alerta = '';
-
-        conexiones.forEach((conexion, indice) => {
-            if (conexion.cliente_ws === ws) {
-                encontrado = true;
-            }
-        });
-
-        if (encontrado) {
-            alerta = `ClienteWS ${data.ws_cliente} - EsCliente : ${data.es_cliente} - IdCliente ${data.id_cliente}`;
-            alerta = alerta + ` - Alerta: ${data.alerta}`;
-            db.insertLogMessage(alerta);
-        } else {
-            // Agregar la conexión del cliente al array de clientes
-            const cliente_nuevo=  { cliente_ws : ws,
-                                    es_cliente : data.es_cliente,
-                                    ws_cliente : data.ws_cliente,
-                                    id_cliente : data.id_cliente};
-
-            conexiones.push(cliente_nuevo);
-            alerta = `Bienvenido Cliente ${data.ws_cliente} (EsCliente : ${data.es_cliente})`;
-        }
-        // Ejemplo de cómo responder al cliente con un objeto JSON
-        const response = { 
-            alerta : alerta
-        };
-        ws.send(JSON.stringify(response));
-    });
-    // Evento cuando se cierra la conexión con el cliente
-    ws.on('close', function close() {
-        // Eliminar la conexión del cliente del array de conexiones
-        conexiones.forEach((conexion, indice) => {
-            if (conexion.cliente_ws === ws) {
-                //console.log(`Elemento encontrado en la posición ${indice}, IdCliente: ${conexion.id_cliente}, EsCliente: ${conexion.es_cliente}`);
-                conexiones.splice(indice, 1);
-            }
-        })
-    });
-});
-
-//*********************************************************/
 
 // Rutas
 app.get('/', (req, res) => {
