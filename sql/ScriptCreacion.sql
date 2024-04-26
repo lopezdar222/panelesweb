@@ -954,7 +954,12 @@ END;
 $$ LANGUAGE plpgsql;
 --select * from Insertar_Cliente_Chat(1, true, 'prueba mensaje 4 desde cliente', 1);
 --select * from Insertar_Cliente_Chat(1, false, 'prueba mensaje 4 desde operador', 3);
-
+select * from cliente_chat order by 1 desc
+select * from cliente
+select * from cliente_sesion where id_cliente = 12 order by 1 desc
+update cliente set marca_baja = 1 where id_cliente = 3
+select * from Obtener_Cliente_Token(12, 'xbkB0oObhDj9VnRaIXghWKUvvILzGD')
+select * from agente
 --DROP FUNCTION Alerta_Cliente_Usuario(in_id_cliente INTEGER, in_id_usuario INTEGER)
 CREATE OR REPLACE FUNCTION Alerta_Cliente_Usuario(in_id_cliente INTEGER, in_id_usuario INTEGER)
 RETURNS TABLE (id_cliente INTEGER) AS $$
@@ -1170,6 +1175,7 @@ SELECT 	cl.id_cliente,
 		ac.id_accion,
 		ac.accion,
 		u.usuario,
+		ROUND(clconf.Aceptadas::numeric / clconf.Totales::numeric * 100) AS cliente_confianza,
 		COALESCE(o.fecha_hora_creacion, '1900-01-01')		AS fecha_hora_operacion,
 		COALESCE(o.fecha_hora_ultima_modificacion, '1900-01-01')	AS fecha_hora_proceso,
 		COALESCE(opr.importe, 0)							AS retiro_importe,
@@ -1197,6 +1203,15 @@ FROM cliente cl JOIN operacion o
 			ON (ag.id_oficina = ofi.id_oficina)
 		JOIN plataforma pla
 			ON (ag.id_plataforma = pla.id_plataforma)
+		JOIN (SELECT id_cliente,
+					COUNT(*) AS Totales,
+					SUM(CASE WHEN id_estado = 2 THEN 1 ELSE 0 END) AS Aceptadas
+				FROM operacion o
+				WHERE id_accion = 1
+					AND id_estado in (2,3)
+					AND marca_baja = false
+				GROUP BY id_cliente) clconf
+			ON (cl.id_cliente = clconf.id_cliente)
 		LEFT JOIN operacion_retiro opr
 			ON (o.id_operacion = opr.id_operacion)
 		LEFT JOIN operacion_carga opc
@@ -1243,7 +1258,7 @@ FROM cliente cl JOIN agente ag
 						SELECT 	id_cliente,
 								1 AS visto_cliente,
 								1 AS visto_operador,
-								MAX(fecha_hora_creacion) AS ult_operacion
+								MAX(fecha_hora_ultima_modificacion) AS ult_operacion
 						FROM operacion
 						GROUP BY id_cliente) operacion
 					GROUP BY id_cliente) ope
@@ -1265,27 +1280,7 @@ GROUP BY cl.id_cliente,
 		ope.visto_operador;
 --select * from v_Clientes order by ult_operacion desc
 
-SELECT	id_cliente,
-		MIN(visto_cliente::int) AS visto_cliente,
-		MIN(visto_operador::int) AS visto_operador,
-		MAX(ult_operacion) AS ult_operacion
-FROM
-	(SELECT 	id_cliente,
-			MIN(visto_cliente::int) AS visto_cliente,
-			MIN(visto_operador::int) AS visto_operador,
-			MAX(fecha_hora_creacion) AS ult_operacion
-	FROM cliente_chat 
-	GROUP BY id_cliente
-	UNION
-	SELECT 	id_cliente,
-			1 AS visto_cliente,
-			1 AS visto_operador,
-			MAX(fecha_hora_creacion) AS ult_operacion
-	FROM operacion
-	GROUP BY id_cliente) operacion
-GROUP BY id_cliente;
-
-select * from operacion
+select * from operacion order by 1 desc
 
 select * from v_Console_Logs
 
@@ -1293,7 +1288,8 @@ select * from cliente
 select * from agente
 select * from plataforma
 select * from oficina
-
+select * from v_Clientes_Operaciones where id_cliente = 1 and id_accion in (1,5) and id_estado = 2
+order by fecha_hora_operacion desc
 select * from cuenta_bancaria
 select * from operacion order by 1 desc
 select * from operacion_retiro order by 1 desc

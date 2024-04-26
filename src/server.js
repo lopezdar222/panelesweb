@@ -836,7 +836,7 @@ app.get('/monitoreo_landingweb_retiro', async (req, res) => {
                                 `codigo_operacion,` +
                                 `id_estado,` +
                                 `estado,` +
-                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_operacion,` +
+                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_operacion,` +
                                 `retiro_importe,` +
                                 `retiro_titular, ` +
                                 `retiro_cbu ` +
@@ -873,7 +873,7 @@ app.get('/monitoreo_landingweb_carga', async (req, res) => {
                                 `codigo_operacion,` +
                                 `id_estado,` +
                                 `estado,` +
-                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_operacion,` +
+                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_operacion,` +
                                 `carga_importe,` +
                                 `carga_bono, ` +
                                 `carga_titular, ` +
@@ -893,7 +893,22 @@ app.get('/monitoreo_landingweb_carga', async (req, res) => {
         const result2 = await db.handlerSQL(query2);
         const datos_cuentas = result2.rows;
 
-        res.render('monitoreo_landingweb_carga', { message: 'ok', title: 'Verificación de Carga', datos: datos, datos_cuentas : datos_cuentas });
+        let fecha_ult_carga_titular = '';
+        const query3 = `select TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_operacion ` +
+                        `from v_Clientes_Operaciones where id_oficina = ${id_oficina} ` +
+                        `and id_estado = 2 and id_accion in (1,5) ` +
+                        `and carga_importe = ${datos[0].carga_importe} ` +
+                        `and LOWER(carga_titular) = LOWER('${datos[0].carga_titular}') ` +
+                        `order by fecha_hora_operacion desc limit 1`;
+        console.log(query3);
+        const result3 = await db.handlerSQL(query3);
+        if (result3.rows.length > 0) {
+            fecha_ult_carga_titular = result3.rows[0].fecha_hora_operacion;
+        } else {
+            fecha_ult_carga_titular = '(Sin Registro)';
+        }
+        
+        res.render('monitoreo_landingweb_carga', { message: 'ok', title: 'Verificación de Carga', datos: datos, datos_cuentas : datos_cuentas, fecha_ult_carga_titular : fecha_ult_carga_titular });
     }
     catch (error) {
         res.render('monitoreo_landingweb_carga', { message: 'error', title: 'Verificación de Carga'});
@@ -929,13 +944,19 @@ app.get('/monitoreo_landingweb', async (req, res) => {
                                 `estado,` +
                                 `id_accion,` +
                                 `accion,` +
-                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_operacion,` +
-                                `TO_CHAR(fecha_hora_proceso, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_proceso,` +
+                                `cliente_confianza,` +
+                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_operacion,` +
+                                `TO_CHAR(fecha_hora_proceso, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_proceso,` +
+                                `TO_CHAR(retiro_importe, '999,999,999,999') as retiro_importe_formato,` +
                                 `retiro_importe,` +
                                 `retiro_cbu,` +
                                 `retiro_titular,` +
+                                `TO_CHAR(carga_importe + carga_bono, '999,999,999,999') as carga_importe_total_formato,` +
+                                `TO_CHAR(carga_importe, '999,999,999,999') as carga_importe_formato,` +
+                                `TO_CHAR(carga_bono, '999,999,999,999') as carga_bono_formato,` +
                                 `carga_importe,` +
-                                `carga_bono ` +
+                                `carga_bono, ` +
+                                `carga_titular ` +
                         `from v_Clientes_Operaciones where marca_baja = false`;
         if (id_rol > 1) {
             query2 = query2 + ` and id_oficina = ${id_oficina}`;
@@ -977,8 +998,8 @@ app.get('/monitoreo_landingweb_detalle', async (req, res) => {
                                 `id_accion,` +
                                 `accion,` +
                                 `usuario,` +
-                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_operacion,` +
-                                `TO_CHAR(fecha_hora_proceso, 'DD/MM/YYYY HH:MM:SS') as fecha_hora_proceso,` +
+                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_operacion,` +
+                                `TO_CHAR(fecha_hora_proceso, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_proceso,` +
                                 `retiro_importe,` +
                                 `retiro_cbu, ` +
                                 `retiro_titular, ` +

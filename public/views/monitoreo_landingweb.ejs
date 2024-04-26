@@ -27,7 +27,7 @@
                     <th>Operación</th>
                     <th>Accion</th>
                     <th>Estado</th>
-                    <th>Monto</th>
+                    <th>Detalle</th>
                     <th>Procesado</th>
                 </tr>
             </thead>
@@ -38,16 +38,26 @@
                         <td><%= dato.plataforma %></td>
                         <td><%= dato.agente_usuario %></td>
                         <td><%= dato.fecha_hora_operacion %></td>
-                        <td><%= dato.cliente_usuario %></td>
+                        <td><%= dato.cliente_usuario %>
+                            <% if (dato.cliente_confianza < 34) { %>
+                                <p class="danger"> (<%= dato.cliente_confianza %> %)</p>
+                            <% } else if (dato.cliente_confianza < 67) { %>
+                                <p class="warning">(<%= dato.cliente_confianza %> %)</p>
+                            <% } else { %>
+                                <p class="success">(<%= dato.cliente_confianza %> %)</p>
+                            <% } %>
+                        </td>
                         <td><%= dato.codigo_operacion %></td>
                         <td><%= dato.accion %></td>
                         <td><%= dato.estado %></td>
                         <% if (dato.id_accion == 1) { %>
-                            <td><%= parseInt(dato.carga_importe,10) + parseInt(dato.carga_bono, 10) %><br>(CARGA : <%= dato.carga_importe %> - BONO : <%= dato.carga_bono %>)</td>
+                            <td>TOTAL: <%= dato.carga_importe_total_formato %>
+                                <br>(TITULAR : <%= dato.carga_titular %>)
+                                <br>(CARGA : <%= dato.carga_importe_formato %> - BONO : <%= dato.carga_bono_formato %>)</td>
                         <% } else if (dato.id_accion == 2) { %>
-                            <td><%= dato.retiro_importe %><br>(CBU : <%= dato.retiro_cbu %> - TITULAR : <%= dato.retiro_titular %>)</td>
+                            <td><%= dato.retiro_importe_formato %><br>(CBU : <%= dato.retiro_cbu %> - TITULAR : <%= dato.retiro_titular %>)</td>
                         <% } else if (dato.id_accion == 5) { %>
-                            <td><%= parseInt(dato.carga_importe,10) + parseInt(dato.carga_bono, 10) %><br>(CARGA : <%= dato.carga_importe %> - BONO : <%= dato.carga_bono %>)
+                            <td>TOTAL: <%= dato.carga_importe_total_formato %><br>(CARGA : <%= dato.carga_importe_formato %> - BONO : <%= dato.carga_bono_formato %>)
                                 <br><a onclick="abrirModal(29, <%=dato.id_operacion %>);"><h6 class="warning">(Ver Detalle)</h6></a>
                             </td>
                         <% } else if (dato.id_accion == 6) { %>
