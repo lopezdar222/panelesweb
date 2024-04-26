@@ -1237,7 +1237,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                         actualizarAlertaMonitoreo(data.id_cliente);
                     }
                 }
-                alertaSistemaOperativo(data.alerta);
+                alertaSistemaOperativo(data.alerta, data.id_cliente);
             };
             /******************************************************************/
 
@@ -1260,32 +1260,44 @@ function enviarMensaje(mensaje, id_cliente) {
     ws.send(JSON.stringify(message));
 }
 
-function alertaSistemaOperativo(alerta) {
+const alertaSistemaOperativo = async (alerta, id_cliente) => {
     const titulo = 'PanelesLanding';
     const icon = '../img/logo.ico';
     let contenido = '';
-    if (alerta == 'chat') {
-        contenido = 'Nuevo Mensaje de Cliente'; 
-    } else {
-        contenido = 'Nueva Solicitud de Cliente'; 
-    }    
-    if (Notification.permission === 'granted') {
-        // El navegador admite notificaciones y ya se ha otorgado permiso
-        new Notification(titulo, {
-            body: contenido,
-            icon: icon
+    try {
+        const response = await fetch(`/alerta_usuarios_clientes/${id_cliente}/${id_usuario}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
         });
-    } else if (Notification.permission !== 'denied') {
-        // Solicitar permiso al usuario para mostrar notificaciones
-        Notification.requestPermission().then(function (permission) {
-            if (permission === 'granted') {
-                // Se ha otorgado permiso, mostrar la notificación
+        const data = await response.json();
+        if (data.message == 'ok') {
+            if (alerta == 'chat') {
+                contenido = 'Nuevo Mensaje de Cliente'; 
+            } else {
+                contenido = 'Nueva Solicitud de Cliente'; 
+            }    
+            if (Notification.permission === 'granted') {
+                // El navegador admite notificaciones y ya se ha otorgado permiso
                 new Notification(titulo, {
                     body: contenido,
                     icon: icon
                 });
+            } else if (Notification.permission !== 'denied') {
+                // Solicitar permiso al usuario para mostrar notificaciones
+                Notification.requestPermission().then(function (permission) {
+                    if (permission === 'granted') {
+                        // Se ha otorgado permiso, mostrar la notificación
+                        new Notification(titulo, {
+                            body: contenido,
+                            icon: icon
+                        });
+                    }
+                });
             }
-        });
+        }
+    } catch (error) {
+        console.error('Error en alerta del Sistema Operativo');
     }
 }
 /*********************Búsqueda en Tablas***************************/
