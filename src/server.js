@@ -1221,13 +1221,13 @@ app.post('/cargar_retiro/:id_operacion/:id_usuario/:monto', async (req, res) => 
         {
             const query2 = `select * from Modificar_Cliente_Retiro(${id_operacion}, 2, ${monto}, ${id_usuario})`;
             await db.handlerSQL(query2);
-            res.status(201).json({ message: `Retiro de Fichas Registrado Exitosamente!` });
+            res.status(201).json({ codigo : 1, message: `Retiro de Fichas Registrado Exitosamente!` });
         } else if (resultado == 'error') {
-            res.status(500).json({ message: 'Error al Retirar Fichas' });
+            res.status(500).json({ codigo : 2, message: 'Error al Retirar Fichas' });
         } else if (resultado == 'en_espera') {
-            res.status(500).json({ message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
+            res.status(500).json({ codigo : 3, message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
         } else if (resultado == 'faltante') {
-            res.status(201).json({ message: 'Saldo Insuficiente!' });
+            res.status(201).json({ codigo : 4, message: 'Saldo Insuficiente!' });
         }
     } catch (error) {
         res.status(500).json({ message: 'Error en el Retiro' });

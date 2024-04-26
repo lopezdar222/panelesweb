@@ -55,11 +55,34 @@ wss.on('connection', async function connection(ws) {
                 } 
             } else if (data.alerta == 'chat' && data.es_cliente == 1) {
                 for (let key in conexiones) {
-                    if ((conexiones[key].id_cliente == data.id_cliente) && (conexiones[key].es_cliente == 0)) {
+                    //if ((conexiones[key].id_cliente == data.id_cliente) && (conexiones[key].es_cliente == 0)) {
+                    if (conexiones[key].es_cliente == 0) {
                         log_alerta = `Alerta a Operador: ${conexiones[key].ws_cliente} - De cliente : ${data.ws_cliente}`;
                         db.insertLogMessage(log_alerta);
                         //alerta_chat.id_cliente = data.id_cliente;
                         sendMessageToClient(conexiones[key].cliente_ws, {alerta : 'chat', id_cliente : data.id_cliente});
+                    }
+                };
+            } else if ((data.alerta == 'sol_retiro_aceptada' || data.alerta == 'sol_carga_aceptada'
+                        || data.alerta == 'sol_retiro_rechazada' || data.alerta == 'sol_carga_rechazada')
+                        && data.es_cliente == 0) {
+                for (let key in conexiones) {
+                    if ((conexiones[key].ws_cliente == data.id_cliente) && (conexiones[key].es_cliente == 1)) {
+                        log_alerta = `Alerta a Cliente: ${conexiones[key].ws_cliente} - De Operador : ${data.ws_cliente} - ${data.alerta}`;
+                        db.insertLogMessage(log_alerta);
+                        //alerta_chat.id_cliente = data.id_cliente;
+                        sendMessageToClient(conexiones[key].cliente_ws, {alerta : data.alerta, id_cliente : data.id_cliente});
+                        break;
+                    }
+                };
+            } else if ((data.alerta == 'sol_retiro_creada' || data.alerta == 'sol_carga_creada')
+                        && data.es_cliente == 1) {
+                for (let key in conexiones) {
+                    if (conexiones[key].es_cliente == 0) {
+                        log_alerta = `Alerta a Operador: ${conexiones[key].ws_cliente} - De Cliente : ${data.ws_cliente} - ${data.alerta}`;
+                        db.insertLogMessage(log_alerta);
+                        //alerta_chat.id_cliente = data.id_cliente;
+                        sendMessageToClient(conexiones[key].cliente_ws, {alerta : data.alerta, id_cliente : data.id_cliente});
                     }
                 };
             }

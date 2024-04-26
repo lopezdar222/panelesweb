@@ -1061,6 +1061,23 @@ const actualizarAlertaUsuariosClientes = async (id_cliente) => {
     }
 };
 
+const actualizarAlertaMonitoreo = async (id_cliente) => {
+    const msgResultado = document.getElementById('alerta_monitoreo');
+    try {
+        const response = await fetch(`/alerta_usuarios_clientes/${id_cliente}/${id_usuario}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        const data = await response.json();
+        if (data.message == 'ok') {
+            msgResultado.innerHTML = '<h3 class="warning">!!!</h3>';
+        }
+    } catch (error) {
+        msgResultado.innerHTML = '<h3 class="warning">error en alerta</h3>';
+    }
+};
+
 document.addEventListener('DOMContentLoaded', async (req, res) => {
     // Obtener los parámetros de la URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -1157,6 +1174,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                 event.preventDefault();
                 url_ultima_invocada = `${this.getAttribute('href')}?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
                 cargarContenido(url_ultima_invocada);
+                document.getElementById('alerta_monitoreo').innerHTML = '';
             });
             
             enlace_menu07.addEventListener('click', function(event) {
@@ -1212,7 +1230,14 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                         cargarContenidoChats(id_cliente, '', true); 
                     }
                     actualizarAlertaUsuariosClientes(data.id_cliente);
+                } else {
+                    if (url_ultima_invocada.indexOf('monitoreo_landingweb') !== -1 ) {
+                        cargarContenido(url_ultima_invocada);
+                    } else {
+                        actualizarAlertaMonitoreo(data.id_cliente);
+                    }
                 }
+                alertaSistemaOperativo(data.alerta);
             };
             /******************************************************************/
 
@@ -1233,6 +1258,35 @@ function enviarMensaje(mensaje, id_cliente) {
                 alerta : mensaje
     };
     ws.send(JSON.stringify(message));
+}
+
+function alertaSistemaOperativo(alerta) {
+    const titulo = 'PanelesLanding';
+    const icon = '../img/logo.ico';
+    let contenido = '';
+    if (alerta == 'chat') {
+        contenido = 'Nuevo Mensaje de Cliente'; 
+    } else {
+        contenido = 'Nueva Solicitud de Cliente'; 
+    }    
+    if (Notification.permission === 'granted') {
+        // El navegador admite notificaciones y ya se ha otorgado permiso
+        new Notification(titulo, {
+            body: contenido,
+            icon: icon
+        });
+    } else if (Notification.permission !== 'denied') {
+        // Solicitar permiso al usuario para mostrar notificaciones
+        Notification.requestPermission().then(function (permission) {
+            if (permission === 'granted') {
+                // Se ha otorgado permiso, mostrar la notificación
+                new Notification(titulo, {
+                    body: contenido,
+                    icon: icon
+                });
+            }
+        });
+    }
 }
 /*********************Búsqueda en Tablas***************************/
 function obtenerDatosTabla(tabla) {
