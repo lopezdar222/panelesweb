@@ -1228,16 +1228,18 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                     if (id_cliente == data.id_cliente) {
                         //alert('Actualizar Chats');
                         cargarContenidoChats(id_cliente, '', true); 
+                    } else {
+                        actualizarAlertaUsuariosClientes(data.id_cliente);
+                        alertaSistemaOperativo(data.alerta, data.id_cliente);
                     }
-                    actualizarAlertaUsuariosClientes(data.id_cliente);
                 } else {
                     if (url_ultima_invocada.indexOf('monitoreo_landingweb') !== -1 ) {
                         cargarContenido(url_ultima_invocada);
                     } else {
                         actualizarAlertaMonitoreo(data.id_cliente);
+                        alertaSistemaOperativo(data.alerta, data.id_cliente);
                     }
                 }
-                alertaSistemaOperativo(data.alerta, data.id_cliente);
             };
             /******************************************************************/
 
