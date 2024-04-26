@@ -56,21 +56,22 @@
             </tr>
             <tr>
                 <th colspan = 2> 
-                    <label for="monto_retiro">Monto Retiro:</label>
-                    <input type="number" id="monto_retiro" value="<%= datos[0].retiro_importe %>">
+                    <!--label for="monto_retiro">Monto Retiro:</label>
+                    <input type="number" id="monto_retiro" value="<%= datos[0].retiro_importe %>"-->
+                    Monto Retirado: <%= datos[0].retiro_importe %>
                 </th>
             </tr>
         </table>
         <div class="container">
-            <h3 class="warning">¡Al realizar esta acción, no habrá opción de Deshacer!</h3>
+            <h3 class="warning">¡Aceptar, implica haber realizado la Transferencia por el Retiro!</h3>
         </div>
         <div class="container">
             <div id="msgResultado" class="column">
-                <button onclick="cargar_Retiro(<%=datos[0].id_operacion %>, <%=datos[0].id_cliente %>);">Aceptar</button>
+                <button onclick="cargar_Retiro(<%=datos[0].id_operacion %>, <%=datos[0].id_cliente %>, <%= datos[0].retiro_importe %>);">Aceptar</button>
             </div>
-            <div id="btnRechazar" class="column">
+            <!--div id="btnRechazar" class="column">
                 <button onclick="rechazar_Retiro(<%=datos[0].id_operacion %>, <%=datos[0].id_cliente %>);">Rechazar</button>
-            </div>
+            </div-->
         </div>
     <%} else {%>
         <h3><%= message %></h3>

@@ -37,7 +37,7 @@ wss.on('connection', async function connection(ws) {
                                 id_cliente : String(data.id_cliente).trim()};
             conexiones[cod_elemento] = cliente_nuevo;
             await db.insertLogMessage(`Bienvenido Cliente ${cliente_nuevo.ws_cliente} (EsCliente : ${cliente_nuevo.es_cliente}) - Conexiones: ${Object.keys(conexiones).length}`);
-            sendMessageToClient(conexiones[cod_elemento].cliente_ws, {alerta : 'hola desde el servidor!'});
+            //sendMessageToClient(conexiones[cod_elemento].cliente_ws, {alerta : 'hola desde el servidor!'});
         } else {
             await db.insertLogMessage(`Conexiones: ${Object.keys(conexiones).length}`);
             if (data.alerta == 'actualiza' && data.es_cliente == 0) {

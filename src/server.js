@@ -1199,7 +1199,10 @@ app.post('/registrar_agente/:id_usuario/:usuario/:password/:id_oficina/:id_plata
 app.post('/cargar_retiro/:id_operacion/:id_usuario/:monto', async (req, res) => {
     try {
         const { id_operacion, id_usuario, monto } = req.params;
-        const query = `select    cliente_usuario,` +
+        const query2 = `select * from Modificar_Cliente_Retiro(${id_operacion}, 2, ${monto}, ${id_usuario})`;
+        await db.handlerSQL(query2);
+        res.status(201).json({ codigo : 1, message: `Retiro de Fichas Registrado Exitosamente!` });
+        /*const query = `select    cliente_usuario,` +
                                 `id_agente,` +
                                 `agente_usuario,` +
                                 `agente_password,` +
@@ -1216,7 +1219,6 @@ app.post('/cargar_retiro/:id_operacion/:id_usuario/:monto', async (req, res) => 
             const retiro_manual3 = require('./scrap_bot3/retirar.js');
             resultado = await retiro_manual3(cliente_usuario.trim(), String(monto), agente_nombre, agente_password);
         }
-        //console.log(`Resultado carga = ${resultado}`);
         if (resultado == 'ok') 
         {
             const query2 = `select * from Modificar_Cliente_Retiro(${id_operacion}, 2, ${monto}, ${id_usuario})`;
@@ -1228,7 +1230,7 @@ app.post('/cargar_retiro/:id_operacion/:id_usuario/:monto', async (req, res) => 
             res.status(500).json({ codigo : 3, message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
         } else if (resultado == 'faltante') {
             res.status(201).json({ codigo : 4, message: 'Saldo Insuficiente!' });
-        }
+        }*/
     } catch (error) {
         res.status(500).json({ message: 'Error en el Retiro' });
     }

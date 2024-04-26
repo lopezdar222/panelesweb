@@ -290,6 +290,7 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
 }
 
 function cerrarModal() {
+    id_cliente = 0;
     const modal = document.getElementById('miModal');
     modal.style.display = 'none';
     document.getElementById('modal-contenido').innerHTML = '';
@@ -804,39 +805,39 @@ const crear_Cuenta_Cobro = async (id_oficina) => {
     }
 };
 
-const cargar_Retiro = async (id_operacion, id_cliente) => {
+const cargar_Retiro = async (id_operacion, id_cliente, monto_retiro) => {
     if (cargando_retiro === 1) {
         alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
         return;
     }
     cargando_retiro = 1;
     const msgResultado = document.getElementById('msgResultado');
-    const btnRechazar = document.getElementById('btnRechazar');
+    /*const btnRechazar = document.getElementById('btnRechazar');
     const monto_retiro = document.getElementById('monto_retiro');
 
     if (monto_retiro.value == '') {
         msgResultado.innerHTML = 'Importe Vacío!';
         cargando_retiro = 0;
         return;
-    }
+    }*/
     try {
-        const response = await fetch(`/cargar_retiro/${id_operacion}/${id_usuario}/${monto_retiro.value}`, {
+        const response = await fetch(`/cargar_retiro/${id_operacion}/${id_usuario}/${monto_retiro}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'}
         });
         const data = await response.json();
         msgResultado.innerHTML = data.message;
-        if (data.message != 'Saldo Insuficiente!') {
+        /*if (data.message != 'Saldo Insuficiente!') {
             btnRechazar.innerHTML = '';
-        }
+        }*/
         if (data.codigo == 1) {
             enviarMensaje('sol_retiro_aceptada', id_cliente);
         }
         cargando_retiro = 0;
     } catch (error) {
         cargando_retiro = 0;
-        msgResultado.innerHTML = 'Error al Cargar Cobro';
+        msgResultado.innerHTML = 'Error al Cargar Retiro';
     }
 };
 
@@ -1220,13 +1221,14 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             };
 
             // Evento cuando se recibe un mensaje del servidor
-            ws.onmessage = function(event) {
+            ws.onmessage = function(event) { 
                 // Aquí puedes manipular el mensaje recibido, por ejemplo, mostrarlo en la página
                 const data = JSON.parse(event.data);
                 //alert(`Alerta = ${data.alerta}`);
                 if (data.alerta == 'chat') { 
+                    /*if ((url_ultima_invocada.indexOf('usuarios_clientes_chat') !== -1) 
+                        && (id_cliente == data.id_cliente)) {*/
                     if (id_cliente == data.id_cliente) {
-                        //alert('Actualizar Chats');
                         cargarContenidoChats(id_cliente, '', true); 
                     } else {
                         actualizarAlertaUsuariosClientes(data.id_cliente);
