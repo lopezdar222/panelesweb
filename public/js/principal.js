@@ -1372,11 +1372,11 @@ function insertarEmoticon() {
     const cuadroTexto = document.getElementById('message-input');
     const emoticonSeleccionado = document.getElementById('emoticones').value;
     if (emoticonSeleccionado != 'sel') {
-      const posicionCursor = cuadroTexto.selectionStart;
-      const textoAnterior = cuadroTexto.value.substring(0, posicionCursor);
-      const textoPosterior = cuadroTexto.value.substring(posicionCursor);
-      cuadroTexto.value = textoAnterior + emoticonSeleccionado + textoPosterior;
-      cuadroTexto.focus();
-      cuadroTexto.setSelectionRange(posicionCursor + emoticonSeleccionado.length, posicionCursor + emoticonSeleccionado.length);  
+        alert(3);
+        const posicionCursor = cuadroTexto.selectionStart;
+        const textoAnterior = cuadroTexto.value.substring(0, posicionCursor);
+        const textoPosterior = cuadroTexto.value.substring(posicionCursor);
+        cuadroTexto.value = textoAnterior + emoticonSeleccionado + textoPosterior;
+        cuadroTexto.setSelectionRange(posicionCursor + emoticonSeleccionado.length, posicionCursor + emoticonSeleccionado.length);  
     }
-  }
+}
