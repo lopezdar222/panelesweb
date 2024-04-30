@@ -135,14 +135,6 @@ function cargarContenidoModal(url) {
       });
 }
             
-function scrollToBottom(url) {
-    if (url.indexOf('usuarios_clientes_chat') !== -1 ) 
-    {
-        const chatMessages = document.getElementById("chat-messages");
-        //chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-}
-
 function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
     const modal = document.getElementById('miModal');
     let id_agente = '';
@@ -1367,3 +1359,24 @@ function crearBotonesPaginacion(tabla, paginacion) {
         paginacion.appendChild(boton);
     }
 }
+
+function scrollToBottom(url) {
+    if (url.indexOf('usuarios_clientes_chat') !== -1 ) 
+    {
+        const chatMessages = document.getElementById("chat-messages");
+        //chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+}
+
+function insertarEmoticon() {
+    const cuadroTexto = document.getElementById('message-input');
+    const emoticonSeleccionado = document.getElementById('emoticones').value;
+    if (emoticonSeleccionado != 'sel') {
+      const posicionCursor = cuadroTexto.selectionStart;
+      const textoAnterior = cuadroTexto.value.substring(0, posicionCursor);
+      const textoPosterior = cuadroTexto.value.substring(posicionCursor);
+      cuadroTexto.value = textoAnterior + emoticonSeleccionado + textoPosterior;
+      cuadroTexto.focus();
+      cuadroTexto.setSelectionRange(posicionCursor + emoticonSeleccionado.length, posicionCursor + emoticonSeleccionado.length);  
+    }
+  }

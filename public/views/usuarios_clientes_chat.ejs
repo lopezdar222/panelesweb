@@ -29,6 +29,13 @@
                 <textarea id="message-input" placeholder="Tu mensaje aquí..." rows="2" cols="70" maxlength="200"></textarea>
             </div>
             <div id="input-area">
+                <select id="emoticones" onchange="insertarEmoticon()">
+                    <option value="sel">Emojis</option>
+                    <option value="😊">😊</option>
+                    <option value="😄">😄</option>
+                    <option value="😛">😛</option>
+                    <!-- Agrega más emoticones según tus necesidades -->
+                </select>                
                 <button id="attach-button" onclick="document.getElementById('file-input').click();">Adjuntar</button>
                 <button id="send-button" onclick="cargarContenidoChats(<%=id_cliente%>, document.getElementById('message-input').value, false);">Enviar</button>
                 <input type="file" id="file-input" style="display: none;">

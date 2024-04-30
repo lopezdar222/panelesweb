@@ -1288,7 +1288,8 @@ select * from cliente
 select * from agente
 select * from plataforma
 select * from oficina
-select * from v_Clientes_Operaciones where id_cliente = 1 and id_accion in (1,5) and id_estado = 2
+select *
+from v_Clientes_Operaciones where id_cliente = 1 and id_accion in (1,5) and id_estado = 2
 order by fecha_hora_operacion desc
 select * from cuenta_bancaria
 select * from operacion order by 1 desc
