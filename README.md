@@ -15,5 +15,5 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser <br>
 * En la carpeta de proyecto ejecutar:
 
 npm init
-npm install express bcrypt body-parser express-session pg connect-pg-simple ip ejs axios
+npm install express bcrypt body-parser express-session pg connect-pg-simple ip ejs axios multer
 npm install ws

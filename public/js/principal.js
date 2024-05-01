@@ -93,7 +93,29 @@ function cargarContenido(url) {
       });
 }
 
-function cargarContenidoChats(id_cliente, mensaje, alerta) {
+async function cargarContenidoChats(id_cliente, mensaje, alerta) {
+    if (document.getElementById('file-input')) 
+    {
+        const fileInput = document.getElementById('file-input');
+        if (fileInput.files.length > 0) {
+            await enviarArchivoAdjunto(id_cliente);
+            const url = `/usuarios_clientes_chat_detalle?id_cliente=${encodeURIComponent(id_cliente)}&mensaje=&id_usuario=${encodeURIComponent(id_usuario)}`;
+            fetch(url)
+            .then(response => response.text())
+            .then(data => {
+                const chatMessages = document.getElementById("chat-messages");
+                chatMessages.innerHTML = data;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                const texto_mensaje = document.getElementById('message-input');
+                texto_mensaje.focus();
+                enviarMensaje('chat', id_cliente);
+            })
+            //.then(enviarMensaje('chat', id_cliente))
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    }
     if ((mensaje != '' || alerta) && document.getElementById("chat-messages")) 
     {
         let mensaje_envio = mensaje;
@@ -122,6 +144,71 @@ function cargarContenidoChats(id_cliente, mensaje, alerta) {
         });
     } 
 }
+
+function mostrarNombreAdjunto() {
+    const fileInput = document.getElementById('file-input');
+    const fileName = document.getElementById('nombre_archivo');
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        fileName.textContent = `Archivo seleccionado: ${file.name}`;
+    } else {
+        fileName.textContent = '';
+    }
+}
+  
+function limpiarAdjunto() {
+    const fileInput = document.getElementById('file-input');
+    const fileName = document.getElementById('nombre_archivo');
+    fileInput.value = null;
+    fileName.textContent = '';
+}
+  
+const enviarArchivoAdjunto = async (id_cliente) => {
+    let file = null;
+    if (document.getElementById('file-input')) {
+      file = document.getElementById('file-input').files[0];
+    }
+    if (file) {
+        const resultado = document.getElementById('resultado_envio_adjunto');
+        const extension = file.name.split('.').pop().toLowerCase();
+        const nuevoNombre = `${id_cliente}_${Date.now()}_${file.name}`;
+        alert(1);
+        // Validar extensión del archivo
+        const extensionesPermitidas = ['jpg', 'png', 'pdf'];
+        if (!extensionesPermitidas.includes(extension)) {
+            resultado.innerHTML = 'La extensión del archivo no está permitida';
+            return;
+        }
+        // Validar peso del archivo
+        const pesoMaximo = 20 * 1024 * 1024; // 20MB en bytes
+        if (file.size > pesoMaximo) {
+            resultado.innerHTML = 'El archivo excede el tamaño máximo permitido de 20MB';
+            return;
+        }
+        alert(2);
+        const formData = new FormData();
+        formData.append('file', file, nuevoNombre);
+        formData.append('id_cliente', id_cliente);
+        formData.append('id_usuario', id_usuario);
+        formData.append('nombre_original', file.name);
+        formData.append('nombre_guardado', nuevoNombre);
+        alert(3);
+        try {
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+        });
+        const data = await response.json();
+        alert(4);
+        limpiarAdjunto();
+        resultado.innerHTML = data.mensaje;
+        } catch (error) {
+            resultado.innerHTML = 'Hubo un error al enviar archivo, por favor reintentar.';
+            console.error('Error:', error);
+        }
+    }
+}
+
 
 function cargarContenidoModal(url) {
     fetch(url)
@@ -1372,11 +1459,11 @@ function insertarEmoticon() {
     const cuadroTexto = document.getElementById('message-input');
     const emoticonSeleccionado = document.getElementById('emoticones').value;
     if (emoticonSeleccionado != 'sel') {
-        alert(3);
-        const posicionCursor = cuadroTexto.selectionStart;
-        const textoAnterior = cuadroTexto.value.substring(0, posicionCursor);
-        const textoPosterior = cuadroTexto.value.substring(posicionCursor);
-        cuadroTexto.value = textoAnterior + emoticonSeleccionado + textoPosterior;
-        cuadroTexto.setSelectionRange(posicionCursor + emoticonSeleccionado.length, posicionCursor + emoticonSeleccionado.length);  
+      const posicionCursor = cuadroTexto.selectionStart;
+      const textoAnterior = cuadroTexto.value.substring(0, posicionCursor);
+      const textoPosterior = cuadroTexto.value.substring(posicionCursor);
+      cuadroTexto.value = textoAnterior + emoticonSeleccionado + textoPosterior;
+      cuadroTexto.focus();
+      cuadroTexto.setSelectionRange(posicionCursor + emoticonSeleccionado.length, posicionCursor + emoticonSeleccionado.length);  
     }
 }

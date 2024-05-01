@@ -14,12 +14,30 @@
                     <% } %>
                     <%if (linea.enviado_cliente) {%>
                         <div class="message other">
-                            <div class="message-content"><%= linea.mensaje %></div>
+                            <%if (linea.mensaje == '') {%>
+                                <div class="message-content">
+                                    <a href="/descargar/<%=linea.nombre_guardado%>" 
+                                        download="<%=linea.nombre_original%>">
+                                        <%= linea.nombre_original %>
+                                    </a>
+                                </div>
+                            <% } else {%>
+                                <div class="message-content"><%= linea.mensaje %></div>
+                            <% } %>
                             <div class="message-time"><%= linea.horario_mensaje %></div>
                         </div>
                     <% } else {%>
                         <div class="message self">
-                            <div class="message-content"><%= linea.mensaje %></div>
+                            <%if (linea.mensaje == '') {%>
+                                <div class="message-content">
+                                    <a href="/descargar/<%=linea.nombre_guardado%>" 
+                                        download="<%=linea.nombre_original%>">
+                                        <%= linea.nombre_original %>
+                                    </a>
+                                </div>
+                            <% } else {%>
+                                <div class="message-content"><%= linea.mensaje %></div>
+                            <% } %>
                             <div class="message-time"><%= linea.horario_mensaje %></div>
                         </div>
                     <% } %>
@@ -28,17 +46,50 @@
             <div>
                 <textarea id="message-input" placeholder="Tu mensaje aquí..." rows="2" cols="70" maxlength="200"></textarea>
             </div>
-            <div id="input-area">
+            <div id="input-area">       
+                <button id="send-button" onclick="cargarContenidoChats(<%=id_cliente%>, document.getElementById('message-input').value, false);">Enviar</button>
                 <select id="emoticones" onchange="insertarEmoticon()">
                     <option value="sel">Emojis</option>
                     <option value="😊">😊</option>
                     <option value="😄">😄</option>
-                    <option value="😛">😛</option>
+                    <option value="😍">😍</option>
+                    <option value="😂">😂</option>
+                    <option value="😎">😎</option>
+                    <option value="😉">😉</option>
+                    <option value="😁">😁</option>
+                    <option value="😅">😅</option>
+                    <option value="🥰">🥰</option>
+                    <option value="🤣">🤣</option>
+                    <option value="😇">😇</option>
+                    <option value="🤗">🤗</option>
+                    <option value="😌">😌</option>
+                    <option value="😏">😏</option>
+                    <option value="😬">😬</option>
+                    <option value="🤔">🤔</option>
+                    <option value="😴">😴</option>
+                    <option value="😢">😢</option>
+                    <option value="😭">😭</option>
+                    <option value="😞">😞</option>
+                    <option value="😔">😔</option>
+                    <option value="😕">😬</option>
+                    <option value="😕">😕</option>
+                    <option value="😟">😟</option>
+                    <option value="😥">😥</option>
+                    <option value="😓">😓</option>
+                    <option value="😫">😫</option>
+                    <option value="😩">😩</option>
                     <!-- Agrega más emoticones según tus necesidades -->
-                </select>                
+                </select>
+            </div>
+            <div id="input-area">                              
                 <button id="attach-button" onclick="document.getElementById('file-input').click();">Adjuntar</button>
-                <button id="send-button" onclick="cargarContenidoChats(<%=id_cliente%>, document.getElementById('message-input').value, false);">Enviar</button>
-                <input type="file" id="file-input" style="display: none;">
+                <input type="file" id="file-input" style="display: none;" accept=".jpg, .png, .pdf, .bmp" onchange="mostrarNombreAdjunto()">
+            </div>
+            <div id="input-area">                              
+                <p id="nombre_archivo"></p>
+            </div>
+            <div id="input-area">                              
+                <p id="resultado_envio_adjunto"></p>                
             </div>
         </div>
     <%} else {%>

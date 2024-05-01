@@ -5,12 +5,30 @@
         <% } %>
         <%if (linea.enviado_cliente) {%>
             <div class="message other">
-                <div class="message-content"><%= linea.mensaje %></div>
+                <%if (linea.mensaje == '') {%>
+                    <div class="message-content">
+                        <a href="/descargar/<%=linea.nombre_guardado%>" 
+                            download="<%=linea.nombre_original%>">
+                            <%= linea.nombre_original %>
+                        </a>
+                    </div>
+                <% } else {%>
+                    <div class="message-content"><%= linea.mensaje %></div>
+                <% } %>
                 <div class="message-time"><%= linea.horario_mensaje %></div>
             </div>
         <% } else {%>
             <div class="message self">
-                <div class="message-content"><%= linea.mensaje %></div>
+                <%if (linea.mensaje == '') {%>
+                    <div class="message-content">
+                        <a href="/descargar/<%=linea.nombre_guardado%>" 
+                            download="<%=linea.nombre_original%>">
+                            <%= linea.nombre_original %>
+                        </a>
+                    </div>
+                <% } else {%>
+                    <div class="message-content"><%= linea.mensaje %></div>
+                <% } %>
                 <div class="message-time"><%= linea.horario_mensaje %></div>
             </div>
         <% } %>

@@ -182,6 +182,22 @@ CREATE TABLE IF NOT EXISTS cliente_chat
 );
 CREATE INDEX cliente_chat_id_cliente ON cliente_chat (id_cliente);
 
+DROP TABLE IF EXISTS cliente_chat_adjunto;
+CREATE TABLE IF NOT EXISTS cliente_chat_adjunto
+(
+    id_cliente_chat_adjunto serial NOT NULL,
+    id_cliente integer NOT NULL,
+    nombre_original character varying(200) NOT NULL DEFAULT '',
+    nombre_guardado character varying(300) NOT NULL DEFAULT '',
+    fecha_hora_creacion timestamp NOT NULL,
+    enviado_cliente boolean NOT NULL DEFAULT true,
+    visto_cliente boolean NOT NULL DEFAULT false,
+    visto_operador boolean NOT NULL DEFAULT false,
+    id_usuario integer NOT NULL DEFAULT 1,
+    PRIMARY KEY (id_cliente_chat_adjunto)
+);
+CREATE INDEX cliente_chat_adjunto_id_cliente ON cliente_chat_adjunto (id_cliente);
+
 DROP TABLE IF EXISTS operacion;
 CREATE TABLE IF NOT EXISTS operacion
 (
@@ -855,6 +871,8 @@ CREATE OR REPLACE FUNCTION Obtener_Cliente_Chat(in_id_cliente INTEGER, in_es_cli
 RETURNS TABLE (id_cliente_chat INTEGER,
 			   id_cliente INTEGER,
 			   mensaje VARCHAR(200), 
+			   nombre_original VARCHAR(200), 
+			   nombre_guardado VARCHAR(300), 
 			   fecha_hora_creacion TIMESTAMP, 
 			   enviado_cliente BOOLEAN, 
 			   visto_cliente BOOLEAN, 
@@ -867,44 +885,73 @@ BEGIN
 		SET visto_cliente = true
 		WHERE cliente_chat.id_cliente = in_id_cliente
 		AND cliente_chat.visto_cliente = false;
+		
+		UPDATE cliente_chat_adjunto
+		SET visto_cliente = true
+		WHERE cliente_chat_adjunto.id_cliente = in_id_cliente
+		AND cliente_chat_adjunto.visto_cliente = false;
 	ELSE
 		UPDATE cliente_chat
 		SET visto_operador = true
 		WHERE cliente_chat.id_cliente = in_id_cliente
 		AND cliente_chat.visto_operador = false;
+		
+		UPDATE cliente_chat_adjunto
+		SET visto_operador = true
+		WHERE cliente_chat_adjunto.id_cliente = in_id_cliente
+		AND cliente_chat_adjunto.visto_operador = false;
 	END IF;
 	
 	RETURN QUERY SELECT clc.id_cliente_chat,
-						clc.id_cliente, 
-						clc.mensaje, 
-						clc.fecha_hora_creacion, 
-						clc.enviado_cliente, 
-						clc.visto_cliente, 
-						clc.visto_operador,
-						clc.id_usuario,
-						u.usuario
+					clc.id_cliente, 
+					clc.mensaje,
+					'' as nombre_original,
+					'' as nombre_guardado,
+					clc.fecha_hora_creacion, 
+					clc.enviado_cliente, 
+					clc.visto_cliente, 
+					clc.visto_operador,
+					clc.id_usuario,
+					u.usuario
 	FROM cliente_chat clc JOIN usuario u
 			ON (clc.id_usuario = u.id_usuario)
 	WHERE clc.id_cliente = in_id_cliente
-	ORDER BY clc.id_cliente_chat;
+	UNION
+	SELECT clc.id_cliente_chat_adjunto as id_cliente_chat,
+					clc.id_cliente, 
+					'' as mensaje,
+					clc.nombre_original, 
+					clc.nombre_guardado, 
+					clc.fecha_hora_creacion, 
+					clc.enviado_cliente, 
+					clc.visto_cliente, 
+					clc.visto_operador,
+					clc.id_usuario,
+					u.usuario
+	FROM cliente_chat_adjunto clc JOIN usuario u
+			ON (clc.id_usuario = u.id_usuario)
+	WHERE clc.id_cliente = in_id_cliente
+	ORDER BY fecha_hora_creacion;
 END;
 $$ LANGUAGE plpgsql;
-/*select id_cliente_chat,id_cliente, mensaje, 
+/*select id_cliente_chat,id_cliente, mensaje, nombre_original,
 		TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY') as fecha_mensaje,
 		TO_CHAR(fecha_hora_creacion, 'HH24:MI') as horario_mensaje, 
 		enviado_cliente, visto_cliente, 
 		visto_operador, id_usuario, usuario, 
 		TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY') = LAG(TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY')) 
-			OVER (ORDER BY id_cliente_chat) AS misma_fecha 
+			OVER (ORDER BY fecha_hora_creacion) AS misma_fecha 
 from Obtener_Cliente_Chat(1, true);*/
 
 --DROP FUNCTION Insertar_Cliente_Chat(in_id_cliente INTEGER, in_es_cliente BOOLEAN, in_mensaje VARCHAR(200), in_id_usuario INTEGER)
 CREATE OR REPLACE FUNCTION Insertar_Cliente_Chat(in_id_cliente INTEGER, in_es_cliente BOOLEAN, in_mensaje VARCHAR(200), in_id_usuario INTEGER)
 RETURNS TABLE (id_cliente_chat INTEGER,
 			   id_cliente INTEGER,
-			   cliente_usuario VARCHAR(200), 
-			   en_sesion BOOLEAN,
+			   /*cliente_usuario VARCHAR(200), 
+			   en_sesion BOOLEAN,*/
 			   mensaje VARCHAR(200), 
+			   nombre_original VARCHAR(200), 
+			   nombre_guardado VARCHAR(300), 
 			   fecha_hora_creacion TIMESTAMP, 
 			   enviado_cliente BOOLEAN, 
 			   visto_cliente BOOLEAN, 
@@ -919,6 +966,11 @@ BEGIN
 		SET visto_cliente = true
 		WHERE cliente_chat.id_cliente = in_id_cliente
 		AND cliente_chat.visto_cliente = false;
+				
+		UPDATE cliente_chat_adjunto
+		SET visto_cliente = true
+		WHERE cliente_chat_adjunto.id_cliente = in_id_cliente
+		AND cliente_chat_adjunto.visto_cliente = false;
 		
 		aux_visto_operador := false;
 	ELSE
@@ -927,13 +979,18 @@ BEGIN
 		WHERE cliente_chat.id_cliente = in_id_cliente
 		AND cliente_chat.visto_operador = false;
 		
+		UPDATE cliente_chat_adjunto
+		SET visto_operador = true
+		WHERE cliente_chat_adjunto.id_cliente = in_id_cliente
+		AND cliente_chat_adjunto.visto_operador = false;
+		
 		aux_visto_operador := true;
 	END IF;
 	
 	INSERT INTO cliente_chat (id_cliente, mensaje, fecha_hora_creacion, enviado_cliente, visto_cliente, visto_operador, id_usuario)
 	VALUES (in_id_cliente, in_mensaje, NOW(), in_es_cliente, in_es_cliente, aux_visto_operador, in_id_usuario);
 	
-	RETURN QUERY SELECT clc.id_cliente_chat,
+	/*RETURN QUERY SELECT clc.id_cliente_chat,
 						clc.id_cliente, 
 						cl.cliente_usuario,
 						cl.en_sesion,
@@ -949,17 +1006,62 @@ BEGIN
 		JOIN usuario u
 			ON (clc.id_usuario = u.id_usuario)
 	WHERE clc.id_cliente = in_id_cliente
-	ORDER BY clc.id_cliente_chat;
+	ORDER BY clc.id_cliente_chat;*/
+	
+	RETURN QUERY SELECT clc.id_cliente_chat,
+					clc.id_cliente, 
+					clc.mensaje,
+					'' as nombre_original,
+					'' as nombre_guardado,
+					clc.fecha_hora_creacion, 
+					clc.enviado_cliente, 
+					clc.visto_cliente, 
+					clc.visto_operador,
+					clc.id_usuario,
+					u.usuario
+	FROM cliente_chat clc JOIN usuario u
+			ON (clc.id_usuario = u.id_usuario)
+	WHERE clc.id_cliente = in_id_cliente
+	UNION
+	SELECT clc.id_cliente_chat_adjunto as id_cliente_chat,
+					clc.id_cliente, 
+					'' as mensaje,
+					clc.nombre_original, 
+					clc.nombre_guardado, 
+					clc.fecha_hora_creacion, 
+					clc.enviado_cliente, 
+					clc.visto_cliente, 
+					clc.visto_operador,
+					clc.id_usuario,
+					u.usuario
+	FROM cliente_chat_adjunto clc JOIN usuario u
+			ON (clc.id_usuario = u.id_usuario)
+	WHERE clc.id_cliente = in_id_cliente
+	ORDER BY fecha_hora_creacion;
 END;
 $$ LANGUAGE plpgsql;
 --select * from Insertar_Cliente_Chat(1, true, 'prueba mensaje 4 desde cliente', 1);
 --select * from Insertar_Cliente_Chat(1, false, 'prueba mensaje 4 desde operador', 3);
-select * from cliente_chat order by 1 desc
-select * from cliente
-select * from cliente_sesion where id_cliente = 12 order by 1 desc
-update cliente set marca_baja = 1 where id_cliente = 3
-select * from Obtener_Cliente_Token(12, 'xbkB0oObhDj9VnRaIXghWKUvvILzGD')
-select * from agente
+
+--DROP FUNCTION Insertar_Cliente_Chat_Adjunto(in_id_cliente INTEGER, in_es_cliente BOOLEAN, in_nombre_original VARCHAR(200), in_nombre_guardado VARCHAR(200), in_id_usuario INTEGER)
+CREATE OR REPLACE FUNCTION Insertar_Cliente_Chat_Adjunto(in_id_cliente INTEGER, in_es_cliente BOOLEAN, in_nombre_original VARCHAR(200), in_nombre_guardado VARCHAR(200), in_id_usuario INTEGER)
+RETURNS VOID AS $$
+DECLARE
+    aux_visto_operador BOOLEAN;
+BEGIN	
+	IF (in_es_cliente) THEN
+		aux_visto_operador := false;
+	ELSE
+		aux_visto_operador := true;
+	END IF;
+
+	INSERT INTO cliente_chat_adjunto (id_cliente, nombre_original, nombre_guardado, fecha_hora_creacion, enviado_cliente, visto_cliente, visto_operador, id_usuario)
+	VALUES (in_id_cliente, in_nombre_original, in_nombre_guardado, NOW(), in_es_cliente, in_es_cliente, aux_visto_operador, in_id_usuario);
+END;
+$$ LANGUAGE plpgsql;
+--select Insertar_Cliente_Chat_Adjunto(1, true, 'prueba adjunto 4 desde cliente', 'prueba adjunto 4 desde cliente guardado', 1);
+--select Insertar_Cliente_Chat_Adjunto(1, false, 'prueba adjunto 4 desde operador', 'prueba adjunto 4 desde operador guardado', 3);
+
 --DROP FUNCTION Alerta_Cliente_Usuario(in_id_cliente INTEGER, in_id_usuario INTEGER)
 CREATE OR REPLACE FUNCTION Alerta_Cliente_Usuario(in_id_cliente INTEGER, in_id_usuario INTEGER)
 RETURNS TABLE (id_cliente INTEGER) AS $$
