@@ -198,6 +198,44 @@ CREATE TABLE IF NOT EXISTS cliente_chat_adjunto
 );
 CREATE INDEX cliente_chat_adjunto_id_cliente ON cliente_chat_adjunto (id_cliente);
 
+DROP TABLE IF EXISTS registro_token;
+CREATE TABLE IF NOT EXISTS registro_token
+(
+    id_registro_token serial NOT NULL,
+    id_token character varying(60) NOT NULL DEFAULT '',
+    de_agente boolean NOT NULL DEFAULT true,
+    activo boolean NOT NULL DEFAULT true,
+    id_usuario integer NOT NULL,
+    ingresos integer NOT NULL,
+    registros integer NOT NULL,
+    fecha_hora_creacion timestamp NOT NULL,
+    id_usuario_ultima_modificacion integer NOT NULL,
+    fecha_hora_ultima_modificacion timestamp NOT NULL,
+    PRIMARY KEY (id_registro_token)
+);
+CREATE INDEX registro_token_id_usuario ON registro_token (id_usuario);
+--select * from cliente order by 1
+insert into registro_token (id_token, 
+							de_agente, 
+							activo, 
+							id_usuario, 
+							ingresos, 
+							registros, 
+							fecha_hora_creacion,
+						   	id_usuario_ultima_modificacion,
+						   	fecha_hora_ultima_modificacion)
+values ('c-4-9473764e8de991edc3899a179f8af9c1ce3d6ba', false, true, 4, 0, 0, now(), 1, now());
+insert into registro_token (id_token, 
+							de_agente, 
+							activo, 
+							id_usuario, 
+							ingresos, 
+							registros, 
+							fecha_hora_creacion,
+						   	id_usuario_ultima_modificacion,
+						   	fecha_hora_ultima_modificacion)
+values ('a-1-9473764e8de991edc3899a179f8af9c1ce3d6ba', true, true, 1, 0, 0, now(), 1, now());
+
 DROP TABLE IF EXISTS operacion;
 CREATE TABLE IF NOT EXISTS operacion
 (
@@ -495,6 +533,24 @@ BEGIN
 	WHERE 	id_cliente = in_id_cliente;
 END;
 $$ LANGUAGE plpgsql;
+
+--DROP FUNCTION Obtener_Token_Registro(in_id_token VARCHAR(60));
+CREATE OR REPLACE FUNCTION Obtener_Token_Registro(in_id_token VARCHAR(60))
+RETURNS TABLE (id_registro_token INTEGER) AS $$
+BEGIN
+	UPDATE registro_token
+	SET	ingresos = ingresos + 1
+	WHERE id_token = in_id_token
+	and activo = true;
+
+	RETURN QUERY SELECT rt.id_registro_token
+	FROM registro_token rt
+	WHERE rt.id_token = in_id_token
+	and rt.activo = true;
+END;
+$$ LANGUAGE plpgsql;
+--select * from Obtener_Token_Registro('c-4-9473764e8de991edc3899a179f8af9c1ce3d6ba');
+--select * from Obtener_Token_Registro('a-1-9473764e8de991edc3899a179f8af9c1ce3d6ba');
 
 --DROP FUNCTION Modificar_Agente(in_id_agente integer, in_id_usuario integer, pass VARCHAR(200), in_estado BOOLEAN, in_id_oficina INTEGER, in_id_plataforma INTEGER)
 CREATE OR REPLACE FUNCTION Modificar_Agente(in_id_agente integer, in_id_usuario integer, pass VARCHAR(200), in_estado BOOLEAN, in_id_oficina INTEGER, in_id_plataforma INTEGER) RETURNS VOID AS $$
@@ -1277,7 +1333,7 @@ SELECT 	cl.id_cliente,
 		ac.id_accion,
 		ac.accion,
 		u.usuario,
-		ROUND(clconf.Aceptadas::numeric / clconf.Totales::numeric * 100) AS cliente_confianza,
+		ROUND(COALESCE(clconf.Aceptadas::numeric, 0) / COALESCE(clconf.Totales::numeric, 1) * 100) AS cliente_confianza,
 		COALESCE(o.fecha_hora_creacion, '1900-01-01')		AS fecha_hora_operacion,
 		COALESCE(o.fecha_hora_ultima_modificacion, '1900-01-01')	AS fecha_hora_proceso,
 		COALESCE(opr.importe, 0)							AS retiro_importe,
@@ -1305,7 +1361,7 @@ FROM cliente cl JOIN operacion o
 			ON (ag.id_oficina = ofi.id_oficina)
 		JOIN plataforma pla
 			ON (ag.id_plataforma = pla.id_plataforma)
-		JOIN (SELECT id_cliente,
+		LEFT JOIN (SELECT id_cliente,
 					COUNT(*) AS Totales,
 					SUM(CASE WHEN id_estado = 2 THEN 1 ELSE 0 END) AS Aceptadas
 				FROM operacion o
@@ -1321,7 +1377,7 @@ FROM cliente cl JOIN operacion o
 		LEFT JOIN cuenta_bancaria opcb
 			ON (opc.id_cuenta_bancaria = opcb.id_cuenta_bancaria)
 WHERE cl.marca_baja = false;
---select * from v_Clientes_Operaciones order by id_operacion desc
+--select * from v_Clientes_Operaciones where id_cliente = 18 order by id_operacion desc
 
 --DROP VIEW v_Clientes
 CREATE OR REPLACE VIEW v_Clientes AS
@@ -1358,6 +1414,13 @@ FROM cliente cl JOIN agente ag
 						GROUP BY id_cliente
 						UNION
 						SELECT 	id_cliente,
+								MIN(visto_cliente::int) AS visto_cliente,
+								MIN(visto_operador::int) AS visto_operador,
+								MAX(fecha_hora_creacion) AS ult_operacion
+						FROM cliente_chat_adjunto 
+						GROUP BY id_cliente						 
+						UNION
+						SELECT 	id_cliente,
 								1 AS visto_cliente,
 								1 AS visto_operador,
 								MAX(fecha_hora_ultima_modificacion) AS ult_operacion
@@ -1382,6 +1445,31 @@ GROUP BY cl.id_cliente,
 		ope.visto_operador;
 --select * from v_Clientes order by ult_operacion desc
 
+--DROP VIEW v_Tokens
+CREATE OR REPLACE VIEW v_Tokens AS
+SELECT 	rt.id_registro_token,
+		rt.id_token,
+		rt.activo,
+		rt.de_agente,
+		COALESCE(cl.id_cliente, 0) 	AS id_cliente,
+		ag.id_agente,
+		ag.id_oficina,
+		ag.id_plataforma,
+		pl.plataforma,
+		pl.url_juegos
+
+FROM registro_token rt LEFT JOIN cliente cl
+		ON (rt.id_usuario = cl.id_cliente 
+			AND NOT rt.de_agente)
+	JOIN agente ag
+		ON ((cl.id_agente = ag.id_agente AND NOT rt.de_agente) 
+			OR 
+			(rt.id_usuario = ag.id_agente AND rt.de_agente))
+	JOIN plataforma pl
+		ON (ag.id_plataforma = pl.id_plataforma);
+--select * from v_Tokens where id_token = 'a-1-9473764e8de991edc3899a179f8af9c1ce3d6ba';
+--select * from v_Tokens where id_token = 'c-4-9473764e8de991edc3899a179f8af9c1ce3d6ba';
+select * from registro_token order by 1 desc
 select * from operacion order by 1 desc
 
 select * from v_Console_Logs

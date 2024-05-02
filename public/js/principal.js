@@ -172,7 +172,6 @@ const enviarArchivoAdjunto = async (id_cliente) => {
         const resultado = document.getElementById('resultado_envio_adjunto');
         const extension = file.name.split('.').pop().toLowerCase();
         const nuevoNombre = `${id_cliente}_${Date.now()}_${file.name}`;
-        alert(1);
         // Validar extensión del archivo
         const extensionesPermitidas = ['jpg', 'png', 'pdf'];
         if (!extensionesPermitidas.includes(extension)) {
@@ -185,21 +184,18 @@ const enviarArchivoAdjunto = async (id_cliente) => {
             resultado.innerHTML = 'El archivo excede el tamaño máximo permitido de 20MB';
             return;
         }
-        alert(2);
         const formData = new FormData();
         formData.append('file', file, nuevoNombre);
         formData.append('id_cliente', id_cliente);
         formData.append('id_usuario', id_usuario);
         formData.append('nombre_original', file.name);
         formData.append('nombre_guardado', nuevoNombre);
-        alert(3);
         try {
             const response = await fetch('/upload', {
                 method: 'POST',
                 body: formData
         });
         const data = await response.json();
-        alert(4);
         limpiarAdjunto();
         resultado.innerHTML = data.mensaje;
         } catch (error) {
@@ -215,8 +211,11 @@ function cargarContenidoModal(url) {
       .then(response => response.text())
       .then(data => {
         document.getElementById('modal-contenido').innerHTML = data;
+        if (url.indexOf('usuarios_clientes_chat') !== -1 ) {
+            scrollToBottom();
+        }
       })
-      .then(scrollToBottom(url))
+      //.then(scrollToBottom(url))
       .catch(error => {
         console.error('Error:', error);
       });
@@ -1447,12 +1446,16 @@ function crearBotonesPaginacion(tabla, paginacion) {
     }
 }
 
-function scrollToBottom(url) {
-    if (url.indexOf('usuarios_clientes_chat') !== -1 ) 
-    {
-        const chatMessages = document.getElementById("chat-messages");
-        //chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+function scrollToBottom() {
+    const chatMessages = document.getElementById("chat-messages");
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    document.getElementById('message-input').addEventListener('keypress', function(event) {
+        if (event.keyCode  === 13) {
+            // Simular el clic en el botón de envío
+            document.getElementById('send-button').click();
+        }
+    });
+    document.getElementById('message-input').focus();
 }
 
 function insertarEmoticon() {
