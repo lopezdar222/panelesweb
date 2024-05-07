@@ -409,6 +409,8 @@ DECLARE
     aux_id_agente INTEGER;
     aux_bloqueado BOOLEAN;
 	aux_token VARCHAR(60);
+	aux_bono_carga_1 INTEGER;
+	aux_bono_creacion INTEGER;
 BEGIN
 	IF NOT EXISTS (SELECT 1
 					FROM cliente_sesion cls join cliente cl 
@@ -442,10 +444,10 @@ BEGIN
 			
 		ELSE 
 		
-			SELECT id_agente
-			INTO aux_id_agente
+			SELECT id_agente, tokens_bono_creacion, tokens_bono_carga_1
+			INTO aux_id_agente, aux_bono_creacion, aux_bono_carga_1
 			FROM agente
-			WHERE agente_usuario = in_agente;	
+			WHERE agente_usuario = in_agente;
 
 			INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
 			VALUES (in_usuario, in_password, aux_id_agente, true, false, now(), 1,  now(), 1)
@@ -457,8 +459,8 @@ BEGIN
 			SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
 			INTO aux_token;
 			
-			INSERT INTO registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-			VALUES (CONCAT('c-', aux_id_cliente::varchar, '-', aux_token), false, true, aux_id_cliente, 0, 0, now(), now(), 1);
+			INSERT INTO registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, bono_creacion, bono_carga_1, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+			VALUES (CONCAT('c-', aux_id_cliente::varchar, '-', aux_token), false, true, aux_id_cliente, 0, 0, aux_bono_creacion, aux_bono_carga_1, now(), now(), 1);
 
 		END IF;
 
@@ -488,6 +490,8 @@ RETURNS TABLE (id_cliente INTEGER) AS $$
 DECLARE
     aux_id_cliente INTEGER;
 	aux_token VARCHAR(60);
+	aux_bono_carga_1 INTEGER;
+	aux_bono_creacion INTEGER;
 BEGIN
 	INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion, id_registro_token, correo_electronico, telefono)
 	VALUES (in_usuario, in_password, in_id_agente, false, false, now(), 1,  now(), 1, in_id_registro_token, in_correo_electronico, in_telefono)
@@ -499,8 +503,13 @@ BEGIN
 	SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
 	INTO aux_token;
 
-	INSERT INTO registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-	VALUES (CONCAT('c-', aux_id_cliente::varchar, '-', aux_token), false, true, aux_id_cliente, 0, 0, now(), now(), 1);
+	SELECT tokens_bono_creacion, tokens_bono_carga_1
+	INTO aux_bono_creacion, aux_bono_carga_1
+	FROM agente
+	WHERE id_agente = in_id_agente;
+			
+	INSERT INTO registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, bono_creacion, bono_carga_1, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+	VALUES (CONCAT('c-', aux_id_cliente::varchar, '-', aux_token), false, true, aux_id_cliente, 0, 0, aux_bono_creacion, aux_bono_carga_1, now(), now(), 1);
 	
 	RETURN QUERY SELECT aux_id_cliente;
 END;
@@ -1601,6 +1610,7 @@ SELECT 	rt.id_registro_token,
 		rt.bono_carga_1,
 		rt.observaciones,
 		COALESCE(cl.id_cliente, 0) 	AS id_cliente,
+		COALESCE(cl.cliente_usuario, '') as cliente_usuario,
 		ag.id_agente,
 		ag.agente_usuario,
 		ag.id_oficina,
@@ -1708,6 +1718,29 @@ GROUP BY tk.id_oficina,
 		tk.agente_usuario,
 		tk.de_agente;
 --select * from v_Tokens_Completo;
+
+
+--DROP VIEW v_Tokens_Completo_Clientes
+CREATE OR REPLACE VIEW v_Tokens_Completo_Clientes AS
+SELECT 	tk.id_registro_token,
+		tk.id_token,
+		tk.id_agente,
+		tk.agente_usuario,
+		tk.cliente_usuario,
+		tk.bono_carga_1,
+		tk.activo,
+		tko.ingresos,
+		tko.registros,
+		tko.cargaron,
+		tko.total_cargas,
+		tko.total_importe,
+		tko.total_bono
+FROM v_Tokens tk JOIN v_Tokens_Operacion tko
+	ON (tk.id_registro_token = tko.id_registro_token)
+WHERE tk.de_agente = false;
+--select * from v_Tokens_Completo_Clientes
+
+select  id_registro_token,id_token,cliente_usuario,bono_carga_1,ingresos,registros,cargaron,total_cargas,total_importe,total_bono from v_Tokens_Completo_Clientes where id_agente = 1 order by cargaron desc, registros desc, ingresos desc
 
 select * from v_Tokens
 
