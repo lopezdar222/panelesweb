@@ -1,0 +1,53 @@
+<html>
+<body>
+    <%if (message === 'ok') {%>
+        <h1><%= title %> de <%= datos[0].agente_usuario %></h1><br>
+        <div id="chat-messages">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Link</th>
+                        <th>Usuario</th>
+                        <th>Bono</th>
+                        <th>Ingresos</th>
+                        <th>Registros</th>
+                        <th>Cargaron</th>
+                        <th>Cargas</th>
+                        <th>Importe</th>
+                        <th>Bonos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                        <% datos.forEach(function(dato) { %>
+                        <tr>
+                            <td><%= dato.id_registro_token %></td>
+                            <td> 
+                                <% if (dato.activo == true) { %>
+                                    <button class="botones" onclick="copiarAlPortapapelesURL('<%=dato.id_token%>');">
+                                        <span class="material-symbols-outlined">link</span>
+                                    </button>
+                                <% } else { %>
+                                    (Inactivo)
+                                <% } %>
+                            </td>
+                            <td><%= dato.cliente_usuario %> </td>
+                            <td><%= dato.bono_carga_1 %>%</td>
+                            <td><%= dato.ingresos %></td>
+                            <td><%= dato.registros %></td>
+                            <td><%= dato.cargaron %></td>
+                            <td><%= dato.total_cargas %></td>
+                            <td>$ <%= dato.total_importe %></td>
+                            <td><%= dato.total_bono %></td>
+                        </tr>
+                        <% }); %>
+                </tbody>
+            </table>
+        </div>
+        <div id="mensaje_portapapeles"></div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

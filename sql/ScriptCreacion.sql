@@ -215,6 +215,7 @@ CREATE TABLE IF NOT EXISTS registro_token
     registros integer NOT NULL,
 	bono_creacion INTEGER NOT NULL DEFAULT 0,
 	bono_carga_1 INTEGER NOT NULL DEFAULT 0,
+	observaciones character varying(200) NOT NULL DEFAULT '',
     fecha_hora_creacion timestamp NOT NULL,
     id_usuario_ultima_modificacion integer NOT NULL,
     fecha_hora_ultima_modificacion timestamp NOT NULL,
@@ -332,6 +333,27 @@ BEGIN
 		fecha_hora_ultima_modificacion = now(),
 		marca_baja = in_estado
 	WHERE id_usuario = in_id_usuario;
+END;
+$$ LANGUAGE plpgsql;
+
+--DROP FUNCTION Insertar_Token_Agente;
+CREATE OR REPLACE FUNCTION Insertar_Token_Agente(in_id_usuario INTEGER, in_id_agente INTEGER, in_observaciones VARCHAR(30), in_bono_carga_1 INTEGER)
+RETURNS TABLE (id_registro_token INTEGER) AS $$
+DECLARE aux_id_registro_token INTEGER;
+		aux_token VARCHAR(60);
+BEGIN
+	SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
+	INTO aux_token;
+
+	INSERT INTO registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, observaciones, bono_carga_1, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+	VALUES (CONCAT('a-', in_id_agente::varchar, '-', aux_token), true, true, in_id_agente, 0, 0, in_observaciones, in_bono_carga_1, now(), now(), in_id_usuario)
+	RETURNING registro_token.id_registro_token INTO aux_id_registro_token;
+
+	IF aux_id_registro_token IS NULL THEN
+		aux_id_registro_token := 0;
+	END IF;
+
+	RETURN QUERY SELECT aux_id_registro_token;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -610,6 +632,19 @@ BEGIN
 		WHERE (rt.id_usuario = cl.id_cliente
 			AND rt.de_agente = false
 			AND cl.id_agente = in_id_agente);
+END;
+$$ LANGUAGE plpgsql;
+
+--DROP FUNCTION Modificar_Token_Agente(in_id_registro_token integer, in_id_usuario integer, in_observaciones VARCHAR(200), in_bono_carga_1 INTEGER, in_activo BOOLEAN)
+CREATE OR REPLACE FUNCTION Modificar_Token_Agente(in_id_registro_token integer, in_id_usuario integer, in_observaciones VARCHAR(200), in_bono_carga_1 INTEGER, in_activo BOOLEAN) RETURNS VOID AS $$
+BEGIN	
+	UPDATE registro_token
+	SET 	bono_carga_1 = in_bono_carga_1,
+			observaciones = in_observaciones,
+			activo = in_activo,
+			id_usuario_ultima_modificacion = in_id_usuario,
+			fecha_hora_ultima_modificacion = now()
+	WHERE id_registro_token = in_id_registro_token;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1556,7 +1591,6 @@ FROM	cliente cl JOIN registro_token rt
 			ON (rtr.de_agente = false AND rtr.id_usuario = clr.id_cliente);
 --SELECT * FROM v_Cliente_Registro
 			
-
 --DROP VIEW v_Tokens
 CREATE OR REPLACE VIEW v_Tokens AS
 SELECT 	rt.id_registro_token,
@@ -1565,9 +1599,12 @@ SELECT 	rt.id_registro_token,
 		rt.de_agente,
 		rt.bono_creacion,
 		rt.bono_carga_1,
+		rt.observaciones,
 		COALESCE(cl.id_cliente, 0) 	AS id_cliente,
 		ag.id_agente,
+		ag.agente_usuario,
 		ag.id_oficina,
+		o.oficina,
 		ag.id_plataforma,
 		pl.plataforma,
 		pl.url_juegos
@@ -1580,7 +1617,9 @@ FROM registro_token rt LEFT JOIN cliente cl
 			OR 
 			(rt.id_usuario = ag.id_agente AND rt.de_agente))
 	JOIN plataforma pl
-		ON (ag.id_plataforma = pl.id_plataforma);
+		ON (ag.id_plataforma = pl.id_plataforma)
+	JOIN oficina o
+		ON (ag.id_oficina = o.id_oficina);
 --select * from v_Tokens where id_token = 'a-1-9473764e8de991edc3899a179f8af9c1ce3d6ba';
 --select * from v_Tokens where id_token = 'c-4-9473764e8de991edc3899a179f8af9c1ce3d6ba';
 
@@ -1613,19 +1652,21 @@ GROUP BY tk.id_registro_token,
 		tk.ingresos;
 --select * from v_Tokens_Operacion
 
-
+--DROP VIEW v_Tokens_Completo
+CREATE OR REPLACE VIEW v_Tokens_Completo AS
 SELECT 	tk.id_registro_token,
 		tk.id_token,
 		tk.activo,
-		tk.de_agente,
-		tk.bono_creacion,
-		tk.bono_carga_1,
-		tk.id_cliente,
-		tk.id_agente,
 		tk.id_oficina,
+		tk.oficina,
 		tk.id_plataforma,
 		tk.plataforma,
 		tk.url_juegos,
+		tk.id_agente,
+		tk.agente_usuario,
+		tk.de_agente,
+		tk.bono_creacion,
+		tk.bono_carga_1,
 		tko.ingresos,
 		tko.registros,
 		tko.cargaron,
@@ -1634,7 +1675,41 @@ SELECT 	tk.id_registro_token,
 		tko.total_bono
 FROM v_Tokens tk JOIN v_Tokens_Operacion tko
 	ON (tk.id_registro_token = tko.id_registro_token)
-WHERE tk.id_cliente = 39;
+WHERE tk.de_agente = true
+UNION
+SELECT 	0		AS id_registro_token,
+		''		AS id_token,
+		true	AS activo,
+		tk.id_oficina,
+		tk.oficina,
+		tk.id_plataforma,
+		tk.plataforma,
+		tk.url_juegos,
+		tk.id_agente,
+		tk.agente_usuario,
+		tk.de_agente,
+		MAX(tk.bono_creacion) 	AS bono_creacion,
+		MAX(tk.bono_carga_1)	AS bono_carga_1,
+		SUM(tko.ingresos)		AS ingresos,
+		SUM(tko.registros)		AS registros,
+		SUM(tko.cargaron) 		AS cargaron,
+		SUM(tko.total_cargas)	as total_cargas,
+		SUM(tko.total_importe)	AS total_importe,
+		SUM(tko.total_bono)		AS total_bono
+FROM v_Tokens tk JOIN v_Tokens_Operacion tko
+	ON (tk.id_registro_token = tko.id_registro_token)
+WHERE tk.de_agente = false AND tk.activo = true
+GROUP BY tk.id_oficina,
+		tk.oficina,
+		tk.id_plataforma,
+		tk.plataforma,
+		tk.url_juegos,
+		tk.id_agente,
+		tk.agente_usuario,
+		tk.de_agente;
+--select * from v_Tokens_Completo;
+
+select * from v_Tokens
 
 select * from operacion_carga
 

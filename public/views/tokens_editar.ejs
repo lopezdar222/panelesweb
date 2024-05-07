@@ -4,81 +4,57 @@
         <br>
         <table>
             <tr>
-                <th> 
-                    <label for="oficina">Oficina:</label><br>
-                    <select id="oficina">
-                        <% datos_oficina.forEach(function(ofi) { %>
-
-                            <option value="<%= ofi.id_oficina %>" 
-                                    <% if (ofi.id_oficina == datos[0].id_oficina) { %>
-                                        selected
-                                    <% } %>
-                                    >
-                                <%= ofi.oficina %>
-                            </option>
-
-                        <% }); %>
-                    </select>
+                <th>
+                    <label>Oficina: <%= datos.oficina %></label>
                 </th>
-                <th> 
-                    <label for="plataforma">Plataforma:</label><br>
-                    <select id="plataforma">
-                        <% datos_plataforma.forEach(function(plataforma) { %>
-                            <option value="<%= plataforma.id_plataforma %>" 
-                                <% if (plataforma.id_plataforma == datos[0].id_plataforma) { %>
-                                    selected
-                                <% } %>
-                                >
-                                <%= plataforma.plataforma %>
-                            </option>
-                        <% }); %>
-                    </select>
+                <th>
+                    <label>Agente: <%= datos.agente_usuario %></label>
                 </th>
             </tr>
             <tr>
                 <th>
-                    <label>Agente: <%= datos[0].agente_usuario %></label>
+                    <label>Plataforma: <%= datos.plataforma %></label>
                 </th>
                 <th>
-                    <label for="password">Password:</label>
-                    <input type="text" id="password" maxlength="200" required value="<%= datos[0].agente_password %>">
+                    <label>URL: <%= datos.url_juegos %></label>
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    <label>ID: <%= datos.id_registro_token %></label>
+                </th>
+                <th>
+                    <label>Token: <%= datos.id_token %></label>
                 </th>
             </tr>
             <tr>       
                 <th> 
-                    <label for="estado">Estado:</label>
-                    <% if (datos[0].marca_baja == false) { %>
-                        <!--input type="checkbox" id="estado" checked><br-->
-                        <select id="estado">
-                            <option value="false" selected>Activo</option>
-                            <option value="true">Inactivo</option>
+                    <label for="activo">Estado:</label>
+                    <% if (datos.activo == false) { %>
+                        <select id="activo">
+                            <option value="false" selected>Inactivo</option>
+                            <option value="true">Activo</option>
                         </select>
                     <% } else { %>
-                        <!--input type="checkbox" id="estado"><br-->
-                        <select id="estado">
-                            <option value="false">Activo</option>
-                            <option value="true" selected>Inactivo</option>
+                        <select id="activo">
+                            <option value="false">Inactivo</option>
+                            <option value="true" selected>Activo</option>
                         </select>
                     <% } %>
                 </th>
                 <th>
-                    <label>Fecha de Creación: <%= datos[0].fecha_hora_creacion %></label>
+                    <label for="observaciones">Observaciones:</label>
+                    <input type="text" id="observaciones" maxlength="200" value="<%= datos.observaciones %>">
                 </th>
-            </tr>
-            <tr>
-                <th colspan="2"> 
-                    <label for="bonoCreacion">Tokens Referidos - Bono por Creación de Usuario (En Fichas):</label>
-                    <input type="number" id="bonoCreacion" min="0" required value="<%= datos[0].tokens_bono_creacion %>">
-                </th> 
             </tr>
             <tr>
                 <th colspan="2"> 
                     <label for="bonoPrimeraCarga">Tokens Referidos - Bono de Primera Carga (%):</label>
-                    <input type="number" id="bonoPrimeraCarga" min="0" max="100" required value="<%= datos[0].tokens_bono_carga_1 %>">
+                    <input type="number" id="bonoPrimeraCarga" min="0" max="100" required value="<%= datos.bono_carga_1 %>">
                 </th>
             </tr>
         </table>
-        <button onclick="modificar_Agente(<%= datos[0].id_agente %>);">Guardar Cambios</button>
+        <button onclick="modificar_Token(<%= datos.id_registro_token %>);">Guardar Cambios</button>
         <div id="msgResultado"></div>
     <%} else {%>
         <h3><%= message %></h3>

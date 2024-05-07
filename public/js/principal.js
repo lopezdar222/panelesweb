@@ -9,6 +9,8 @@ let lista_negra_cliente = 0;
 let enviando_mensaje_cliente = 0;
 let registrando_agente = 0;
 let modificando_agente = 0;
+let registrando_token = 0;
+let modificando_token = 0;
 let creando_oficina = 0;
 let modificando_oficina = 0;
 let creando_cuenta_cobro = 0;
@@ -233,6 +235,7 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
     let id_cuenta_bancaria = '';
     let id_operacion = '';
     let id_oficina = '';
+    let id_token = '';
     let url = '';
     modal.style.display = 'block';
     switch (opcion)
@@ -375,6 +378,23 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
             url = `/monitoreo_landingweb_detalle?id_operacion=${encodeURIComponent(id_operacion)}`;
             cargarContenidoModal(url);
             break;
+        case 31:
+            id_token = par1;
+            url = `/tokens_editar?id_token=${encodeURIComponent(id_token)}`;
+            cargarContenidoModal(url);
+            break;
+        case 32:
+            id_agente = par1;
+            id_rol_par = par2;
+            url = `/tokens_ver?id_agente=${encodeURIComponent(id_agente)}&id_rol=${encodeURIComponent(id_rol_par)}`;
+            cargarContenidoModal(url);
+            break;
+        case 33:
+            id_oficina = par1;
+            id_rol_par = par2;
+            url = `/tokens_nuevo?id_oficina=${encodeURIComponent(id_oficina)}&id_rol=${encodeURIComponent(id_rol_par)}`;
+            cargarContenidoModal(url);
+            break;
         default:
             console.log('Modal Vacío');
     }
@@ -462,6 +482,50 @@ const bloqueo_Cliente = async (id_cliente, bloqueo) => {
     }
 };
 
+const modificar_Token = async (id_registro_token) => {
+    if (modificando_token == 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    modificando_token = 1;
+    const msgResultado = document.getElementById('msgResultado');
+    const comboActivo = document.getElementById('activo');
+    const activo = comboActivo.options[comboActivo.selectedIndex].value;
+    const bonoPrimeraCarga = document.getElementById('bonoPrimeraCarga');
+    const observaciones = document.getElementById('observaciones');
+
+    if (bonoPrimeraCarga.value == '') {
+        msgResultado.innerHTML = 'Porcentaje Bono Primero Carga Vacío!';
+        modificando_token = 0;
+        return;
+    }
+    if (parseInt(bonoPrimeraCarga.value, 10) < 0){
+        msgResultado.innerHTML = 'No puede ser menor a cero!';
+        modificando_token = 0;
+        return;
+    }
+    if (observaciones.value == '') {
+        observaciones.value = '-';
+    }
+    try {
+        const response = await fetch(`/modificar_token/${id_registro_token}/${id_usuario}/${observaciones.value}/${activo}/${bonoPrimeraCarga.value}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        if (response.ok) {
+            const data = await response.json();
+            msgResultado.innerHTML = data.message;
+        } else {
+            msgResultado.innerHTML = 'Error al Modificar Token';
+        }
+        modificando_token = 0;
+    } catch (error) {
+        modificando_token = 0;
+        msgResultado.innerHTML = 'Error al Modificar Token';
+    }
+};
+
 const modificar_Agente = async (id_agente) => {
     if (modificando_agente=== 1) {
         alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
@@ -486,22 +550,22 @@ const modificar_Agente = async (id_agente) => {
     }
     if (bonoCreacion.value == '') {
         msgResultado.innerHTML = 'Porcentaje Bono Primero Carga Vacío!';
-        creando_oficina = 0;
+        modificando_agente = 0;
         return;
     }
     if (bonoPrimeraCarga.value == '') {
         msgResultado.innerHTML = 'Porcentaje Bono Primero Carga Vacío!';
-        creando_oficina = 0;
+        modificando_agente = 0;
         return;
     }
     if (parseInt(bonoCreacion.value, 10) < 0){
         msgResultado.innerHTML = 'No puede ser menor a cero!';
-        creando_oficina = 0;
+        modificando_agente = 0;
         return;
     }
     if (parseInt(bonoPrimeraCarga.value, 10) < 0){
         msgResultado.innerHTML = 'No puede ser menor a cero!';
-        creando_oficina = 0;
+        modificando_agente = 0;
         return;
     }
     try {
@@ -520,6 +584,50 @@ const modificar_Agente = async (id_agente) => {
     } catch (error) {
         modificando_agente = 0;
         msgResultado.innerHTML = 'Error al Modificar Agente';
+    }
+};
+
+const registrar_Token= async () => {
+    if (registrando_agente=== 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    registrando_token = 1;
+    const msgResultado = document.getElementById('msgResultado');
+    const comboAgente = document.getElementById('agente');
+    const agente = comboAgente.options[comboAgente.selectedIndex].value;
+    const observaciones = document.getElementById('observaciones');
+    const bonoPrimeraCarga = document.getElementById('bonoPrimeraCarga');
+
+    if (bonoPrimeraCarga.value == '') {
+        msgResultado.innerHTML = 'Porcentaje Bono Primera Carga Vacío!';
+        registrando_token = 0;
+        return;
+    }
+    if (parseInt(bonoPrimeraCarga.value, 10) < 0){
+        msgResultado.innerHTML = 'No puede ser menor a cero!';
+        registrando_token = 0;
+        return;
+    }
+    if (observaciones.value == '') {
+        observaciones.value = '-';
+    }
+    try {
+        const response = await fetch(`/registrar_token/${id_usuario}/${agente}/${observaciones.value}/${bonoPrimeraCarga.value}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        if (response.ok) {
+            const data = await response.json();
+            msgResultado.innerHTML = data.message;
+        } else {
+            msgResultado.innerHTML = data.message;
+        }
+        registrando_token = 0;
+    } catch (error) {
+        registrando_token = 0;
+        msgResultado.innerHTML = 'Error al Registrar Token (Cliente)';
     }
 };
 
@@ -551,22 +659,22 @@ const registrar_Agente = async () => {
     }
     if (bonoCreacion.value == '') {
         msgResultado.innerHTML = 'Porcentaje Bono Primero Carga Vacío!';
-        creando_oficina = 0;
+        registrando_agente = 0;
         return;
     }
     if (bonoPrimeraCarga.value == '') {
         msgResultado.innerHTML = 'Porcentaje Bono Primero Carga Vacío!';
-        creando_oficina = 0;
+        registrando_agente = 0;
         return;
     }
     if (parseInt(bonoCreacion.value, 10) < 0){
         msgResultado.innerHTML = 'No puede ser menor a cero!';
-        creando_oficina = 0;
+        registrando_agente = 0;
         return;
     }
     if (parseInt(bonoPrimeraCarga.value, 10) < 0){
         msgResultado.innerHTML = 'No puede ser menor a cero!';
-        creando_oficina = 0;
+        registrando_agente = 0;
         return;
     }
     try {
@@ -1591,7 +1699,7 @@ function copiarAlPortapapelesURL(token) {
         .then(() => {
             //console.log('¡Copiado al portapapeles!');
             msgPortapapeles = document.getElementById('mensaje_portapapeles');
-            msgPortapapeles.innerHTML = '<h3>Enlace de Registro copiado al portapapeles!</h3>';
+            msgPortapapeles.innerHTML = '<h3 class="warning">Enlace de Registro copiado al portapapeles!</h3>';
             // Programa una tarea para borrar el mensaje después de 5 segundos
             setTimeout(() => {
                 // Verifica si el elemento todavía existe

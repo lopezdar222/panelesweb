@@ -9,16 +9,26 @@
     <p>En la <b>Configuración Tokens de Registro</b>, se pueden visualizar los siguientes <b>atributos</b>:</p>
     <br>
     <ul>
+        <li><b>ID</b>: Identificación única del Token</li>
         <li><b>Oficina</b>: Oficina a la que pertenece.</li>
-        <li><b>Rol</b>: Rol que cumple el Usuario. Esto determina las acciones que puede realizar en el Sistema.</li>
-        <li><b>Usuario</b>: Nombre del Usuario.</li>
-        <li><b>Creación</b>: Fecha y Hora de creación del Usuario.</li>
-        <li><b>Estado</b>: Estado del Usuarrio en el Sistema.</li>
+        <li><b>Plataforma</b>: Plataforma a la que pertenece.</li>
+        <li><b>Agente</b>: Agente al que pertenece.</li>
+        <li><b>Propio</b>: Indica si es un token propio del agente, o de los clientes que tiene bajo su rama.</li>
+        <li><b>Link</b>: Enlace de registro del token propio de agente.</li>
+        <li><b>Bono</b>: Porcentaje de bono que recibe el usuario registrado en la primer carga.</li>
+        <li><b>Ingresos</b>: Cantidad de veces que se abrió en enlace del Token.</li>
+        <li><b>Registros</b>: Cantidad de veces que se registraron con en enlace del Token.</li>
+        <li><b>Cargaron</b>: Cantidad clientes registrados con en enlace del Token que realizaron Cargas.</li>
+        <li><b>Cargas</b>: Cantidad cargas de clientes registrados con en enlace del Token.</li>
+        <li><b>Importe</b>: Suma total del importe de las cargas de clientes registrados con en enlace del Token.</li>
+        <li><b>Bonos</b>: Suma total de bonos de las cargas de clientes registrados con en enlace del Token.</li>
     </ul>
     <br>
-    <p>Para Modificar los atributos, hacer click en el botón <b>EDITAR</b></p>
+    <p>Si el token no es propio, al hacer click en el botón <b>VER</b> se puede ver información de los tokens de los clientes bajo la rama del agente</p>
     <br>
-    <p>Para un Nuevo Token, hacer click en el botón <b>NUEVO</b></p>
+    <p>si el token es propio, para editarlo hacer click en el botón <b>EDITAR</b></p>
+    <br>
+    <p>Para un Nuevo Token, hacer click en el botón <b>NUEVO TOKEN</b></p>
     <br>
 </div>
 <button onclick="cerrarModal();">Finalizar</button>

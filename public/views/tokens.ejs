@@ -16,6 +16,7 @@
         <table id="miTabla">
             <thead>
                 <tr>
+                    <th>ID</th>
                     <th>Oficina</th>
                     <th>Plataforma</th>
                     <th>Agente</th>
@@ -34,23 +35,34 @@
             <tbody>
                     <% datos.forEach(function(dato) { %>
                     <tr>
+                        <td>
+                            <% if (dato.de_agente == true) { %>
+                                <%= dato.id_registro_token %>
+                            <% } else { %>
+                                #
+                            <% } %>
+                        </td>
                         <td><%= dato.oficina %></td>
                         <td><%= dato.plataforma %></td>
                         <td><%= dato.agente_usuario %> </td>
-                        <% if (dato.de_agente == true) { %>
-                            <td> Sí </td>
-                        <% } else { %>
-                            <td> No </td>
-                        <% } %>
-                        <% if (dato.de_agente == true) { %>
-                            <td>
-                                <button class="botones" o onclick="copiarAlPortapapelesURL('<%=dato.id_token%>');">
-                                    <span class="material-symbols-outlined">link</span>
-                                </button>
-                            </td>
-                        <% } else { %>
-                            <td></td>
-                        <% } %>
+                        <td> 
+                            <% if (dato.de_agente == true) { %>
+                                Sí
+                            <% } else { %>
+                                No
+                            <% } %>
+                        </td>
+                        <td> 
+                            <% if (dato.de_agente == true) { %>
+                                <% if (dato.activo == true) { %>
+                                    <button class="botones" onclick="copiarAlPortapapelesURL('<%=dato.id_token%>');">
+                                        <span class="material-symbols-outlined">link</span>
+                                    </button>
+                                <% } else { %>
+                                    (Inactivo)
+                                <% } %>
+                            <% } %>
+                        </td>
                         <td><%= dato.bono_carga_1 %>%</td>
                         <td><%= dato.ingresos %></td>
                         <td><%= dato.registros %></td>
@@ -58,11 +70,13 @@
                         <td><%= dato.total_cargas %></td>
                         <td>$ <%= dato.total_importe %></td>
                         <td><%= dato.total_bono %></td>
-                        <% if (dato.de_agente == true) { %>
-                            <td><button onclick="abrirModal(1, <%=dato.id_registro_token %>);">Editar</button></td>
-                        <% } else { %>
-                            <td><button onclick="abrirModal(1, <%=dato.id_registro_token %>);">Ver</button></td>
-                        <% } %>
+                        <td> 
+                            <% if (dato.de_agente == true) { %>
+                                <button onclick="abrirModal(31, <%=dato.id_registro_token %>);">Editar</button>
+                            <% } else { %>
+                                <button onclick="abrirModal(32, <%=dato.id_agente %>, <%=id_rol %>);">Ver</button>
+                            <% } %>
+                        </td>
                     </tr>
                     <% }); %>
             </tbody>
@@ -73,7 +87,7 @@
         <h3><%= message %></h3>
     <%} %>
     <%if (id_rol < 3) {%>
-        <td><button onclick="abrirModal(2, <%=id_oficina %>);">Nuevo Token</button></td>
+        <td><button onclick="abrirModal(33, <%=id_oficina %>, <%=id_rol %>);">Nuevo Token</button></td>
     <%} %>
 </body>
 </html>

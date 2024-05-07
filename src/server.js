@@ -405,7 +405,98 @@ app.get('/tokens', async (req, res) => {
         res.render('tokens', { message: 'ok', title: 'Tokens de Registro', datos: datos, id_rol : id_rol, id_oficina : id_oficina});
     }
     catch (error) {
-        res.render('tokens', { message: 'error', title: 'Tokens de Registro', id_rol : id_rol});
+        res.render('tokens', { message: 'error', title: 'Tokens de Registro'});
+    }
+});
+
+app.get('/tokens_ver', async (req, res) => {
+    // Obtener los parámetros de la URL
+    const id_agente = parseInt(req.query.id_agente, 10);
+    const id_rol = parseInt(req.query.id_rol, 10);
+    try {
+        const query2 = `select  id_registro_token,` +
+                                `id_token,` +
+                                `agente_usuario,` +
+                                `cliente_usuario,` +
+                                `activo,` +
+                                `bono_carga_1,` +
+                                `ingresos,` +
+                                `registros,` +
+                                `cargaron,` +
+                                `total_cargas,` +
+                                `total_importe,` +
+                                `total_bono ` +
+                        `from v_Tokens_Completo_Clientes where id_agente = ${id_agente} ` +
+                        `order by cargaron desc, registros desc, ingresos desc`;
+        //console.log(query2);
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('tokens_ver', { message: 'No hay Tokens de Registro', title: 'Tokens de Registro de Clientes', id_rol : id_rol, id_oficina : id_oficina});
+            return;
+        }
+        const datos = result2.rows;
+        res.render('tokens_ver', { message: 'ok', title: 'Tokens de Registro de Clientes', datos: datos, id_rol : id_rol});
+    }
+    catch (error) {
+        res.render('tokens_ver', { message: 'error', title: 'Tokens de Registro de Clientes'});
+    }
+});
+
+app.get('/tokens_nuevo', async (req, res) => {
+    // Obtener los parámetros de la URL
+    const id_oficina = req.query.id_oficina;
+    const id_rol = req.query.id_rol;
+    try {
+        let query2 = `select    id_agente,` +
+                                `Concat(oficina, ' - ', plataforma, ' - ', agente_usuario) as agente ` +
+                        `from v_Agentes where marca_baja = false`;
+        if (id_rol > 1) {
+            query2 = query2 + ` and id_oficina = ${id_oficina}`;
+        }
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('tokens_nuevo', { message: 'Token Inexistente', title: 'Creación de Token'});
+            return;
+        }
+        const datos = result2.rows;
+        res.render('tokens_nuevo', { message: 'ok', title: 'Creación de Token', datos: datos});
+    }
+    catch (error) {
+        res.render('tokens_nuevo', { message: 'error', title: 'Creación de Token'});
+    }
+});
+
+
+app.get('/tokens_editar', async (req, res) => {
+    // Obtener los parámetros de la URL
+    const id_token = req.query.id_token;
+    try {
+        const query2 = `select    id_registro_token,` +
+                                `id_token,` +
+                                `activo,` +
+                                `bono_creacion,` +
+                                `bono_carga_1,` +
+                                `id_agente,` +
+                                `agente_usuario,` +
+                                `id_oficina,` +
+                                `oficina,` +
+                                `id_plataforma,` +
+                                `plataforma,` +
+                                `url_juegos,` +
+                                `observaciones ` +
+                        `from v_Tokens where id_registro_token = ${id_token}`;
+        
+        const result2 = await db.handlerSQL(query2);
+        //console.log(query2);
+        if (result2.rows.length == 0) {
+            res.render('tokens_editar', { message: 'Token Inexistente', title: 'Edición de Token'});
+            return;
+        }
+        const datos = result2.rows[0];
+        res.render('tokens_editar', { message: 'ok', title: 'Edición de Token', datos: datos});
+    }
+    catch (error) {
+        res.render('tokens_editar', { message: 'error', title: 'Edición de Token'});
     }
 });
 
@@ -1265,6 +1356,17 @@ app.post('/bloqueo_cliente/:id_usuario/:id_cliente/:bloqueo', async (req, res) =
     }
 });
 
+app.post('/modificar_token/:id_registro_token/:id_usuario/:observaciones/:activo/:bono_carga_1', async (req, res) => {
+    const { id_registro_token, id_usuario, observaciones, activo, bono_carga_1 } = req.params;
+    try {
+        const query = `select Modificar_Token_Agente(${id_registro_token}, ${id_usuario}, '${observaciones}', ${bono_carga_1}, ${activo})`;
+        await db.handlerSQL(query);
+        res.status(201).json({ message: 'Token Modificado Exitosamente!' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al Modificar Token!' });
+    }
+});
+
 app.post('/modificar_datos_registro/:id_cliente/:id_usuario/:telefono/:email', async (req, res) => {
     const { id_cliente, id_usuario, telefono, email } = req.params;
     try {
@@ -1317,6 +1419,23 @@ app.post('/registrar_usuario/:id_usuario/:usuario/:password/:id_rol/:id_oficina'
         res.status(201).json({ message: 'Usuario registrado exitosamente.' });
     } catch (error) {
         res.status(500).json({ message: 'Error al registrar usuario.' });
+    }
+});
+
+app.post('/registrar_token/:id_usuario/:id_agente/:observaciones/:bono_carga_1', async (req, res) => {
+    const { id_usuario, id_agente, observaciones, bono_carga_1 } = req.params;
+    try {
+        const query = `select * from Insertar_Token_Agente(${id_usuario}, ${id_agente}, '${observaciones}', ${bono_carga_1})`;
+        const result = await db.handlerSQL(query);
+        const id_registro_token = result.rows[0].id_registro_token;
+        //console.log(query);
+        if (id_registro_token > 0) {
+            res.status(201).json({ message: `Token Número ${id_registro_token} registrado exitosamente.` });
+        } else {
+            res.status(201).json({ message: 'Error al Insertar Token (Servidor)' });
+        }        
+    } catch (error) {
+        res.status(500).json({ message: 'Error al Registrar Token (Servidor)' });
     }
 });
 

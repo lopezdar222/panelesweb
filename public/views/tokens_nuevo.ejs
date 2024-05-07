@@ -4,38 +4,20 @@
         <br>
         <table>
             <tr>
-                <th>
-                    <label for="usuario">Agente Usuario:</label>
-                    <input type="text" id="usuario" value=""> 
-                </th>
-                <th>
-                    <label for="password">Agente Contraseña:</label>
-                    <input type="text" id="password" value="">        
-                </th>
-            </tr>
-            <tr>       
-                <th>
-                    <label for="oficina">Oficina:</label><br>
-                    <select id="oficina">
-                        <% datos_oficina.forEach(function(ofi) { %>
-                            <option value="<%= ofi.id_oficina %>"><%=ofi.oficina%></option>
-                        <% }); %>
-                    </select>
-                </th>
-                <th> 
-                    <label for="plataforma">Plataforma:</label><br>
-                    <select id="plataforma">
-                        <% datos_plataforma.forEach(function(plataforma) { %>
-                            <option value="<%= plataforma.id_plataforma %>"><%=plataforma.plataforma%></option>
+                <th colspan="2">
+                    <label for="agente">Agente:</label><br>
+                    <select id="agente">
+                        <% datos.forEach(function(agente) { %>
+                            <option value="<%= agente.id_agente %>"><%=agente.agente%></option>
                         <% }); %>
                     </select>
                 </th>
             </tr>
             <tr>
-                <th colspan="2"> 
-                    <label for="bonoCreacion">Tokens Referidos - Bono por Creación de Usuario (En Fichas):</label>
-                    <input type="number" id="bonoCreacion" min="0" required value="0">
-                </th> 
+                <th colspan="2">
+                    <label for="observaciones">Observaciones:</label>
+                    <input type="text" id="observaciones" maxlength="200" value="-">
+                </th>
             </tr>
             <tr>
                 <th colspan="2"> 
@@ -44,11 +26,11 @@
                 </th>
             </tr>
         </table>
+        <button onclick="registrar_Token();">Crear Token</button>
+        <div id="msgResultado"></div>
     <%} else {%>
         <h3><%= message %></h3>
     <%} %>
-    <button onclick="registrar_Agente();">Registrar Agente</button>
-    <div id="msgResultado"></div>
     <button onclick="cerrarModal();">Finalizar</button>
 </body>
 </html>
