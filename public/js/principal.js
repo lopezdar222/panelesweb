@@ -27,6 +27,7 @@ let anulando_notificacion_cobro = 0;
 let bloqueando_cliente = 0;
 let cargando_cobro_manual = 0;
 let cargando_retiro_manual = 0;
+let modificando_datos_registro = 0;
 const numFilasPorPagina = 10;
 let paginaActual = 1;
 let datos = [];
@@ -47,6 +48,9 @@ function cargarContenido(url) {
             tiene_busqueda = true;
         }
         if (url.indexOf('agentes') !== -1 ) {
+            tiene_busqueda = true;
+        }
+        if (url.indexOf('tokens') !== -1 ) {
             tiene_busqueda = true;
         }
         if (url.indexOf('monitoreo_landingweb') !== -1 ) {
@@ -311,6 +315,10 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
             url = `/usuarios_clientes_ayuda`;
             cargarContenidoModal(url);
             break;
+        case 17:
+            url = `/tokens_ayuda`;
+            cargarContenidoModal(url);
+            break;
         case 18:
             url = `/monitoreo_landingweb_ayuda`;
             cargarContenidoModal(url);
@@ -342,9 +350,9 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
             url = `/usuarios_clientes_carga?id_cliente=${encodeURIComponent(id_cliente)}`;
             cargarContenidoModal(url);
             break;
-        case 28:
-            id_cliente = par1;
-            url = `/usuarios_clientes_retiro?id_cliente=${encodeURIComponent(id_cliente)}`;
+        case 26: 
+            id_usuario_par = par1;
+            url = `/usuarios_historial?id_usuario=${encodeURIComponent(id_usuario_par)}`;
             cargarContenidoModal(url);
             break;
         case 27:
@@ -352,9 +360,14 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
             url = `/usuarios_clientes_bloqueo?id_cliente=${encodeURIComponent(id_cliente)}`;
             cargarContenidoModal(url);
             break;
-        case 26: 
-            id_usuario_par = par1;
-            url = `/usuarios_historial?id_usuario=${encodeURIComponent(id_usuario_par)}`;
+        case 28:
+            id_cliente = par1;
+            url = `/usuarios_clientes_retiro?id_cliente=${encodeURIComponent(id_cliente)}`;
+            cargarContenidoModal(url);
+            break;
+        case 30:
+            id_cliente = par1;
+            url = `/usuarios_clientes_info?id_cliente=${encodeURIComponent(id_cliente)}`;
             cargarContenidoModal(url);
             break;
         case 29:
@@ -374,6 +387,53 @@ function cerrarModal() {
     document.getElementById('modal-contenido').innerHTML = '';
     cargarContenido(url_ultima_invocada);
 }
+
+const guardar_Datos_Registro = async (id_cliente) => {
+    if (modificando_datos_registro=== 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    modificando_datos_registro = 1;
+    const msgResultado = document.getElementById('msgResultado');
+    const email = document.getElementById('email');
+    const telefono = document.getElementById('telefono');
+    const regexTelefono = /^[0-9]+$/;
+    const regexCorreo = /^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+$/;
+
+    if (!regexTelefono.test(telefono.value) && telefono.value != '') {
+        msgResultado.innerHTML = 'Ingresar un número telefónico válido';
+        modificando_datos_registro = 0;
+        return;
+    }
+    if (!regexCorreo.test(email.value) && email.value != '') {
+        msgResultado.innerHTML = 'Ingresar un correo electrónico válido';
+        modificando_datos_registro = 0;
+        return;
+    }
+    if (telefono.value == '') {
+        telefono.value = '0';
+    }
+    if (email.value == '') {
+        email.value = 'a@a.a';
+    }
+    try {
+        const response = await fetch(`/modificar_datos_registro/${id_cliente}/${id_usuario}/${telefono.value}/${email.value}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        if (response.ok) {
+            const data = await response.json();
+            msgResultado.innerHTML = data.message;
+        } else {
+            msgResultado.innerHTML = 'Error al Modificar Agente';
+        }
+        modificando_datos_registro = 0;
+    } catch (error) {
+        modificando_datos_registro = 0;
+        msgResultado.innerHTML = 'Error al Modificar Agente';
+    }
+};
 
 const bloqueo_Cliente = async (id_cliente, bloqueo) => {
     if (bloqueando_cliente == 1) {
@@ -416,14 +476,36 @@ const modificar_Agente = async (id_agente) => {
     const oficina = comboOficina.options[comboOficina.selectedIndex].value;
     const comboPlataforma = document.getElementById('plataforma');
     const plataforma = comboPlataforma.options[comboPlataforma.selectedIndex].value;
+    const bonoCreacion = document.getElementById('bonoCreacion');
+    const bonoPrimeraCarga = document.getElementById('bonoPrimeraCarga');
 
     if (password.value == '') {
         msgResultado.innerHTML = 'Contraseña Vacía!';
         modificando_agente = 0;
         return;
     }
+    if (bonoCreacion.value == '') {
+        msgResultado.innerHTML = 'Porcentaje Bono Primero Carga Vacío!';
+        creando_oficina = 0;
+        return;
+    }
+    if (bonoPrimeraCarga.value == '') {
+        msgResultado.innerHTML = 'Porcentaje Bono Primero Carga Vacío!';
+        creando_oficina = 0;
+        return;
+    }
+    if (parseInt(bonoCreacion.value, 10) < 0){
+        msgResultado.innerHTML = 'No puede ser menor a cero!';
+        creando_oficina = 0;
+        return;
+    }
+    if (parseInt(bonoPrimeraCarga.value, 10) < 0){
+        msgResultado.innerHTML = 'No puede ser menor a cero!';
+        creando_oficina = 0;
+        return;
+    }
     try {
-        const response = await fetch(`/modificar_agente/${id_agente}/${id_usuario}/${password.value}/${estado}/${oficina}/${plataforma}`, {
+        const response = await fetch(`/modificar_agente/${id_agente}/${id_usuario}/${password.value}/${estado}/${oficina}/${plataforma}/${bonoPrimeraCarga.value}/${bonoCreacion.value}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'}
@@ -454,6 +536,8 @@ const registrar_Agente = async () => {
     const oficina = comboOficina.options[comboOficina.selectedIndex].value;
     const comboPlataforma = document.getElementById('plataforma');
     const plataforma = comboPlataforma.options[comboPlataforma.selectedIndex].value;
+    const bonoCreacion = document.getElementById('bonoCreacion');
+    const bonoPrimeraCarga = document.getElementById('bonoPrimeraCarga');
 
     if (usuario.value == '') {
         msgResultado.innerHTML = 'Usuario Vacío!';
@@ -465,8 +549,28 @@ const registrar_Agente = async () => {
         registrando_agente = 0;
         return;
     }
+    if (bonoCreacion.value == '') {
+        msgResultado.innerHTML = 'Porcentaje Bono Primero Carga Vacío!';
+        creando_oficina = 0;
+        return;
+    }
+    if (bonoPrimeraCarga.value == '') {
+        msgResultado.innerHTML = 'Porcentaje Bono Primero Carga Vacío!';
+        creando_oficina = 0;
+        return;
+    }
+    if (parseInt(bonoCreacion.value, 10) < 0){
+        msgResultado.innerHTML = 'No puede ser menor a cero!';
+        creando_oficina = 0;
+        return;
+    }
+    if (parseInt(bonoPrimeraCarga.value, 10) < 0){
+        msgResultado.innerHTML = 'No puede ser menor a cero!';
+        creando_oficina = 0;
+        return;
+    }
     try {
-        const response = await fetch(`/registrar_agente/${id_usuario}/${usuario.value}/${password.value}/${oficina}/${plataforma}`, {
+        const response = await fetch(`/registrar_agente/${id_usuario}/${usuario.value}/${password.value}/${oficina}/${plataforma}/${bonoPrimeraCarga.value}/${bonoCreacion.value}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'}
@@ -1189,6 +1293,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             const menu06 = document.getElementById('menu06');
             const menu07 = document.getElementById('menu07');
             const menu08 = document.getElementById('menu08');
+            const menu09 = document.getElementById('menu09');
             //const indicador01 = document.getElementById('indicador01');
             //const indicador02 = document.getElementById('indicador02');
             const logout = document.getElementById('logout');
@@ -1207,6 +1312,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                 menu03.style.display = 'none';
                 menu05.style.display = 'none';
                 menu07.style.display = 'none';
+                menu09.style.display = 'none';
             }
             //console.log(`Usuario: ${id_usuario}, Rol: ${id_rol}`);
             // Manejar eventos de clic en los enlaces del menú
@@ -1218,6 +1324,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             const enlace_menu06 = document.getElementById('menu06');
             const enlace_menu07 = document.getElementById('menu07');
             const enlace_menu08 = document.getElementById('menu08');
+            const enlace_menu09 = document.getElementById('menu09');
             
             enlace_menu01.addEventListener('click', function(event) {
                 event.preventDefault();
@@ -1267,6 +1374,12 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                 url_ultima_invocada = `${this.getAttribute('href')}?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
                 cargarContenido(url_ultima_invocada);
                 document.getElementById('alerta_usuarios_clientes').innerHTML = '';
+            });
+
+            enlace_menu09.addEventListener('click', function(event) {
+                event.preventDefault();
+                url_ultima_invocada = `${this.getAttribute('href')}?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
+                cargarContenido(url_ultima_invocada);
             });
 
             // Obtén el modal y el botón para cerrar el modal
@@ -1470,3 +1583,24 @@ function insertarEmoticon() {
       cuadroTexto.setSelectionRange(posicionCursor + emoticonSeleccionado.length, posicionCursor + emoticonSeleccionado.length);  
     }
 }
+
+function copiarAlPortapapelesURL(token) {
+    // Intentar copiar el texto al portapapeles
+    const urlToken = 'https://red365club.com/html/registro.html?token=' + token;
+    navigator.clipboard.writeText(urlToken)
+        .then(() => {
+            //console.log('¡Copiado al portapapeles!');
+            msgPortapapeles = document.getElementById('mensaje_portapapeles');
+            msgPortapapeles.innerHTML = '<h3>Enlace de Registro copiado al portapapeles!</h3>';
+            // Programa una tarea para borrar el mensaje después de 5 segundos
+            setTimeout(() => {
+                // Verifica si el elemento todavía existe
+                if (msgPortapapeles) {
+                    // Borra el contenido del mensaje
+                    msgPortapapeles.innerHTML = '';
+                }}, 3000); // 5000 milisegundos = 5 segundos
+        })
+        .catch(err => {
+            console.error('Error al Copiar al portapapeles:', err);
+        });
+  }

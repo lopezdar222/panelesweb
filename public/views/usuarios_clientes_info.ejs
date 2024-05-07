@@ -1,0 +1,107 @@
+<html>
+<head>
+    <h1><%= title %></h1>
+</head>
+<body>
+    <%if (message == 'ok') {%>
+        <br>
+        <table>
+            <tr>
+                <th>
+                    Usuario del Cliente: <%= datos.cliente_usuario %>
+                </th>
+                <th>
+                    Creacion: <%= datos.fecha_hora_creacion %>  
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    <% if (datos.id_registro_token == 0) { %>
+                        Preexistente en Plataforma
+                    <% } else { %>
+                        <% if (datos.de_agente == false) { %>
+                            Cliente Referente: <%= datos.cliente_referente %>
+                        <% } else { %>
+                            Generado con Token de Agente
+                        <% } %>
+                    <% } %>
+                </th>
+                <th>
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    <label for="email">Correo Electrónico:</label>
+                    <input type="text" id="email" maxlength="100" value="<%= datos.correo_electronico %>"><br>
+                </th>
+                <th>
+                    <label for="telefono">Teléfono:</label>
+                    <input type="text" id="telefono" maxlength="50" value="<%= datos.telefono %>"><br>
+                </th>
+            </tr>
+        </table>
+        <div id="msgResultado"></div>
+        <button onclick="guardar_Datos_Registro(<%= datos.id_cliente %>, 1);">Guardar Correo y Teléfono</button>
+        <table>
+            <tr>
+                <th>
+                    Token: <%= datos.id_token %>
+                </th>
+                <th>
+                    Número de Ingresos: <%= datos.ingresos %>  
+                </th>
+            </tr>
+            <tr>
+                <th>
+                    Número de Registros: <%= datos.registros %>
+                </th>
+                <th>
+                    Número de Registrados que Cargaron: <%= datos.cargaron %>  
+                </th>
+            </tr>
+            <tr>
+                <th>
+                </th>
+                <th>
+                    Monto Cargas: <%= datos.total_importe %>
+                </th>
+            </tr>
+            <tr>
+                <th>
+                </th>
+                <th>
+                    Monto Bonos: <%= datos.total_bono %> 
+                </th>
+            </tr>
+        </table>
+        <h2>Información de sesiones del Usuario:</h2>
+        <div id="chat-messages">
+            <table>
+                <thead>
+                    <tr>
+                        <th>IP</th>
+                        <th>Moneda</th>
+                        <th>Saldo</th>
+                        <th>Apertura</th>
+                        <th>Cierre</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% datos_sesiones.forEach(function(dato) { %>
+                        <tr>
+                            <td><%= dato.ip %></td>
+                            <td><%= dato.moneda %></td>
+                            <td><%= dato.monto %></td>
+                            <td><%= dato.fecha_hora_creacion %></td>
+                            <td><%= dato.fecha_hora_cierre %></td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+    <button onclick="cerrarModal();">Finalizar</button>
+</body>
+</html>

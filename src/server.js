@@ -48,6 +48,10 @@ app.get('/agentes_ayuda', async (req, res) => {
     res.render('agentes_ayuda', { title: 'Tutorial de Agentes' });
 });
 
+app.get('/tokens_ayuda', async (req, res) => {
+    res.render('tokens_ayuda', { title: 'Tutorial de Tokens de Registro' });
+});
+
 app.get('/usuarios_ayuda', async (req, res) => {
     res.render('usuarios_ayuda', { title: 'Tutorial de Usuarios' });
 });
@@ -105,10 +109,11 @@ app.get('/usuarios_clientes', async (req, res) => {
         const query = `select * from Obtener_Usuario_Token(${id_usuario},'${id_token}')`;
         const result = await db.handlerSQL(query);
         if (result.rows.length == 0) {
-            res.render('agentes', { message: 'error de sesión', title: 'Agentes'});
+            res.render('agentes', { message: 'error de sesión', title: 'Clientes'});
             return;
         }
         const id_oficina = result.rows[0].id_oficina;
+        const id_rol = result.rows[0].id_rol;
         let query2 = `select    id_cliente,` +
                                 `cliente_usuario,` +
                                 `cliente_password,` +
@@ -132,10 +137,59 @@ app.get('/usuarios_clientes', async (req, res) => {
             return;
         }
         const datos = result2.rows;
-        res.render('usuarios_clientes', { message: 'ok', title: 'Clientes', datos: datos});
+        res.render('usuarios_clientes', { message: 'ok', title: 'Clientes', datos: datos, id_rol: id_rol});
     }
     catch (error) {
         res.render('usuarios_clientes', { message: 'error', title: 'Clientes'});
+    }
+});
+
+app.get('/usuarios_clientes_info', async (req, res) => {
+    try 
+    {
+        // Obtener los parámetros de la URL
+        const id_cliente = parseInt(req.query.id_cliente, 10);
+        const query2 = `select id_cliente,` +
+                                `cliente_usuario,` +
+                                `cliente_password,` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI') as fecha_hora_creacion,` +
+                                `correo_electronico, ` +
+                                `telefono, ` +
+                                `id_token, ` +
+                                `ingresos, ` +
+                                `registros, ` +
+                                `cargaron, ` +
+                                `total_cargas, ` +
+                                `total_importe, ` +
+                                `total_bono, ` +
+                                `id_registro_token, ` +
+                                `de_agente, ` +
+                                `cliente_referente ` +
+                        `from v_Cliente_Registro where id_cliente = ${id_cliente}`;
+        
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('usuarios_clientes_info', { message: 'Cliente No encontrado', title: 'Información de Registro'});
+            return;
+        }
+        const datos = result2.rows[0];
+
+        const query3 = `select ip,` +
+                            `moneda,` +
+                            `monto,` +
+                            `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
+                            `fecha_hora_cierre ` +
+                        `from v_Clientes_Sesiones where id_cliente = ${id_cliente} ` +
+                        `order by id_cliente_sesion desc`;
+
+        const result3 = await db.handlerSQL(query3);
+        const datos_sesiones = result3.rows;
+
+        //console.log(datos);
+        res.render('usuarios_clientes_info', { message: 'ok', title: 'Información de Registro', datos : datos, datos_sesiones : datos_sesiones });
+    }
+    catch (error) {
+        res.render('usuarios_clientes_info', { message: 'error', title: 'Información de Registro'});
     }
 });
 
@@ -305,6 +359,56 @@ app.get('/usuarios_clientes_retiro', async (req, res) => {
     }
 });
 
+app.get('/tokens', async (req, res) => {
+    // Obtener los parámetros de la URL
+    const id_usuario = parseInt(req.query.id_usuario, 10);
+    const id_token = req.query.id_token;
+    const id_rol = parseInt(req.query.id_rol, 10);
+    try {
+        const query = `select * from Obtener_Usuario_Token(${id_usuario},'${id_token}')`;
+        const result = await db.handlerSQL(query);
+        if (result.rows.length == 0) {
+            res.render('agentes', { message: 'error de sesión', title: 'Tokens de Registro'});
+            return;
+        }
+        const id_oficina = result.rows[0].id_oficina;
+        let query2 = `select    id_registro_token,` +
+                                `id_token,` +
+                                `activo,` +
+                                `id_oficina,` +
+                                `oficina,` +
+                                `id_plataforma,` +
+                                `plataforma,` +
+                                `url_juegos,` +
+                                `id_agente,` +
+                                `agente_usuario,` +
+                                `de_agente,` +
+                                `bono_creacion,` +
+                                `bono_carga_1,` +
+                                `ingresos,` +
+                                `registros,` +
+                                `cargaron,` +
+                                `total_cargas,` +
+                                `total_importe,` +
+                                `total_bono ` +
+                        `from v_Tokens_Completo`;
+        if (result.rows[0].id_rol > 1) {
+            query2 = query2 + ` where id_oficina = ${id_oficina}`;
+        }
+        query2 = query2 + ` order by cargaron desc, registros desc, ingresos desc, plataforma`;
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('tokens', { message: 'No hay Tokens de Registro', title: 'Tokens de Registro', id_rol : id_rol, id_oficina : id_oficina});
+            return;
+        }
+        const datos = result2.rows;
+        res.render('tokens', { message: 'ok', title: 'Tokens de Registro', datos: datos, id_rol : id_rol, id_oficina : id_oficina});
+    }
+    catch (error) {
+        res.render('tokens', { message: 'error', title: 'Tokens de Registro', id_rol : id_rol});
+    }
+});
+
 app.get('/agentes', async (req, res) => {
     // Obtener los parámetros de la URL
     const id_usuario = parseInt(req.query.id_usuario, 10);
@@ -361,6 +465,8 @@ app.get('/agentes_editar', async (req, res) => {
                                 `plataforma,` +
                                 `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
                                 `marca_baja,` +
+                                `tokens_bono_carga_1,` +
+                                `tokens_bono_creacion,` +
                                 `id_oficina,` +
                                 `oficina ` +
                         `from v_Agentes where id_agente = ${id_agente}`;
@@ -381,6 +487,8 @@ app.get('/agentes_editar', async (req, res) => {
                 id_plataforma : result2.rows[0].id_plataforma,
                 plataforma : result2.rows[0].plataforma,
                 id_oficina : result2.rows[0].id_oficina,
+                tokens_bono_carga_1 : result2.rows[0].tokens_bono_carga_1,
+                tokens_bono_creacion : result2.rows[0].tokens_bono_creacion,
                 oficina : result2.rows[0].oficina}
         ];
         
@@ -1157,10 +1265,21 @@ app.post('/bloqueo_cliente/:id_usuario/:id_cliente/:bloqueo', async (req, res) =
     }
 });
 
-app.post('/modificar_agente/:id_agente/:id_usuario/:password/:estado/:oficina/:id_plataforma', async (req, res) => {
-    const { id_agente, id_usuario, password, estado, oficina, id_plataforma } = req.params;
+app.post('/modificar_datos_registro/:id_cliente/:id_usuario/:telefono/:email', async (req, res) => {
+    const { id_cliente, id_usuario, telefono, email } = req.params;
     try {
-        const query = `select Modificar_Agente(${id_agente}, ${id_usuario}, '${password}', ${estado}, ${oficina}, ${id_plataforma})`;
+        const query = `select Modificar_Cliente_Registro(${id_cliente}, ${id_usuario}, '${telefono}', '${email}')`;
+        const result = await db.handlerSQL(query);
+        res.status(201).json({ message: 'Datos de Registro Modificados Exitosamente!' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error al Modificar Datos de Registro!' });
+    }
+});
+
+app.post('/modificar_agente/:id_agente/:id_usuario/:password/:estado/:oficina/:id_plataforma/:bono_carga_1/:bono_creacion', async (req, res) => {
+    const { id_agente, id_usuario, password, estado, oficina, id_plataforma, bono_carga_1, bono_creacion } = req.params;
+    try {
+        const query = `select Modificar_Agente(${id_agente}, ${id_usuario}, '${password}', ${estado}, ${oficina}, ${id_plataforma}, ${bono_carga_1}, ${bono_creacion})`;
         const result = await db.handlerSQL(query);
         res.status(201).json({ message: 'Agente Modificado Exitosamente!' });
     } catch (error) {
@@ -1201,18 +1320,18 @@ app.post('/registrar_usuario/:id_usuario/:usuario/:password/:id_rol/:id_oficina'
     }
 });
 
-app.post('/registrar_agente/:id_usuario/:usuario/:password/:id_oficina/:id_plataforma', async (req, res) => {
-    const { id_usuario, usuario, password, id_oficina, id_plataforma } = req.params;
+app.post('/registrar_agente/:id_usuario/:usuario/:password/:id_oficina/:id_plataforma/:bono_carga_1/:bono_creacion', async (req, res) => {
+    const { id_usuario, usuario, password, id_oficina, id_plataforma, bono_carga_1, bono_creacion } = req.params;
     try {
         const queryChek = `select * from v_Agentes where agente_usuario = '${usuario}' and marca_baja = false;`;
         const result1 = await db.handlerSQL(queryChek);
         //console.log(queryChek);
         if (result1.rows.length > 0) {
-            res.status(401).json({ message: 'El usuario ya existe!' });
+            res.status(401).json({ message: 'El Agente ya existe!' });
             return;
         }
 
-        const query = `select Insertar_Agente(${id_usuario}, '${usuario}', '${password}', ${id_oficina}, ${id_plataforma})`;
+        const query = `select Insertar_Agente(${id_usuario}, '${usuario}', '${password}', ${id_oficina}, ${id_plataforma}, ${bono_carga_1}, ${bono_creacion})`;
         const result2 = await db.handlerSQL(query);
         //console.log(query);
 

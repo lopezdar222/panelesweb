@@ -26,6 +26,9 @@
                     <th>Carga</th>
                     <th>Retiro</th>
                     <th>Bloqueo</th>
+                    <% if (id_rol < 3) { %>
+                        <th>Info</th>
+                    <% } %>
                 </tr>
             </thead>
             <tbody>
@@ -62,6 +65,12 @@
                                 <% } %>
                             </button>
                         </td>
+                        <% if (id_rol < 3) { %>
+                            <td><button class="botones"  onclick="abrirModal(30, <%=dato.id_cliente %>);">
+                                    <span class="material-symbols-outlined">info</span>                        
+                                </button>
+                            </td>
+                        <% } %>
                     </tr>
                     <% }); %>
             </tbody>
