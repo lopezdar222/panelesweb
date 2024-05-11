@@ -1241,7 +1241,7 @@ const cargar_Cobro_Manual = async (id_cliente) => {
     }
 };
 
-const cargar_Cobro = async (id_operacion, id_cliente) => {
+const cargar_Cobro = async (id_operacion, id_cliente, cantidad_cargas, id_cliente_referente) => {
     if (cargando_cobro === 1) {
         alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
         return;
@@ -1252,6 +1252,7 @@ const cargar_Cobro = async (id_operacion, id_cliente) => {
     const monto_bono = document.getElementById('monto_bono');
     const comboCuenta = document.getElementById('cuenta_bancaria');
     const id_cuenta_bancaria = comboCuenta.options[comboCuenta.selectedIndex].value;
+    let msgBonoReferido = '';
 
     if (monto_importe.value == '') {
         msgResultado.innerHTML = 'Importe Vacío!';
@@ -1270,14 +1271,36 @@ const cargar_Cobro = async (id_operacion, id_cliente) => {
                 'Content-Type': 'application/json'}
         });
         const data = await response.json();
-        msgResultado.innerHTML = data.message;
         if (data.codigo == 1) {
             enviarMensaje('sol_carga_aceptada', id_cliente);
+        }
+        if (cantidad_cargas == 0) {
+            msgBonoReferido = await cargar_Bono_Referido(id_cliente_referente, monto_bono.value, id_cuenta_bancaria, id_operacion);
+            msgResultado.innerHTML = data.message + ' - ' + msgBonoReferido;
+        } else {
+            msgResultado.innerHTML = data.message;
         }
         cargando_cobro = 0;
     } catch (error) {
         cargando_cobro = 0;
         msgResultado.innerHTML = 'Error al Cargar Cobro';
+    }
+};
+
+const cargar_Bono_Referido = async (id_cliente, monto_bono, id_cuenta_bancaria, id_operacion) => {
+    try {
+        const response = await fetch(`/cargar_bono_referido/${id_cliente}/${id_usuario}/${monto_bono}/${id_cuenta_bancaria}/${id_operacion}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        const data = await response.json();
+        if (data.codigo == 1) {
+            enviarMensaje('sol_bono_referido', id_cliente);
+        }
+        return data.message;
+    } catch (error) {
+        return 'Error al Cargar Bono Referido';
     }
 };
 

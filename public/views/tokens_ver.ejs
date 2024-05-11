@@ -1,4 +1,16 @@
 <html>
+    <head>
+        <style>
+            .container {
+                display: flex;
+                width: 100%; /* Establece el ancho de la tabla al 100% del contenedor */
+            }
+            table {
+                width: 100%; /* Establece el ancho de la tabla al 100% del contenedor */
+                border-collapse: collapse; /* Combina los bordes de las celdas */
+            }
+        </style>
+    </head>
 <body>
     <%if (message === 'ok') {%>
         <h1><%= title %> de <%= datos[0].agente_usuario %></h1><br>

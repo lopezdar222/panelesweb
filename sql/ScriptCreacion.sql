@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS cliente_sesion
 (
     id_cliente_sesion serial NOT NULL,
     id_cliente integer NOT NULL,
-    id_token character varying(30) NOT NULL DEFAULT '',
+    id_token character varying(100) NOT NULL DEFAULT '',
     ip character varying(100) NOT NULL DEFAULT '',
     moneda character varying(30),
     monto numeric,
@@ -545,7 +545,7 @@ BEGIN
 						o.id_oficina,
 						o.contacto_whatsapp,
 						o.contacto_telegram,
-						o.bono_carga_1,
+						COALESCE(rtr.bono_carga_1, o.bono_carga_1) AS bono_carga_1,
 						o.bono_carga_perpetua,
 						o.minimo_carga,
 						o.minimo_retiro,
@@ -573,7 +573,10 @@ BEGIN
 		LEFT JOIN registro_token rt
 			ON (rt.id_usuario = cl.id_cliente
 			   AND rt.activo = true
-			   AND rt.de_agente = false);
+			   AND rt.de_agente = false)
+		LEFT JOIN registro_token rtr
+			ON (rtr.id_registro_token = cl.id_registro_token
+			   	AND rtr.activo = true);
 END;
 $$ LANGUAGE plpgsql;
 --select * from Obtener_Cliente_Token(2, 'ejemplo');
@@ -882,6 +885,7 @@ insert into accion(accion) values ('Carga Manual');
 insert into accion(accion) values ('Retiro Manual');
 insert into accion(accion) values ('Primer Ingreso');
 insert into accion(accion) values ('Creación de Usuario');
+insert into accion(accion) values ('Carga Bono Referido');
 --select * from accion;
 
 --DROP FUNCTION Obtener_Oficina();
@@ -986,7 +990,8 @@ BEGIN
 	UPDATE operacion
 	SET	fecha_hora_ultima_modificacion = NOW(),
 		id_usuario_ultima_modificacion = in_id_usuario,
-		id_estado = in_id_estado
+		id_estado = in_id_estado,
+		notificado = false
 	WHERE id_operacion = in_id_operacion;
 	
 	IF (in_id_estado = 2) THEN
@@ -1006,7 +1011,8 @@ BEGIN
 	UPDATE operacion
 	SET	fecha_hora_ultima_modificacion = NOW(),
 		id_usuario_ultima_modificacion = in_id_usuario,
-		id_estado = in_id_estado
+		id_estado = in_id_estado,
+		notificado = false
 	WHERE id_operacion = in_id_operacion;
 	
 	IF (in_id_estado = 2) THEN
@@ -1251,6 +1257,38 @@ END;
 $$ LANGUAGE plpgsql;
 --SELECT * FROM Alerta_Cliente_Usuario(1,5)
 
+--DROP FUNCTION Cargar_Bono_Referido(in_id_cliente INTEGER, in_id_usuario INTEGER, in_monto INTEGER, in_id_cuenta_bancaria INTEGER, in_id_operacion INTEGER)
+CREATE OR REPLACE FUNCTION Cargar_Bono_Referido(in_id_cliente INTEGER, in_id_usuario INTEGER, in_monto INTEGER, in_id_cuenta_bancaria INTEGER, in_id_operacion INTEGER)
+RETURNS TABLE (id_operacion INTEGER, codigo_operacion INTEGER) AS $$
+DECLARE
+    aux_id_operacion INTEGER;
+    aux_codigo_operacion INTEGER;
+    aux_codigo_operacion_referido INTEGER;
+    aux_cliente_usuario_referido VARCHAR(100);
+BEGIN
+	SELECT COUNT(op.id_operacion) + 1
+	INTO 	aux_codigo_operacion
+	FROM 	operacion op
+	WHERE 	op.id_cliente = in_id_cliente;
+	
+	SELECT	cl.cliente_usuario, op.codigo_operacion
+	INTO aux_cliente_usuario_referido, aux_codigo_operacion_referido
+	FROM operacion op JOIN cliente cl
+		ON (op.id_cliente = cl.id_cliente
+		   AND op.id_operacion = in_id_operacion);
+		   
+	INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+	VALUES (aux_codigo_operacion, 9, in_id_cliente, 2, false, false, now(), now(), in_id_usuario)
+	RETURNING operacion.id_operacion INTO aux_id_operacion;
+	
+	INSERT INTO operacion_carga (id_operacion, titular, importe, bono, id_cuenta_bancaria, sol_importe, sol_bono, sol_id_cuenta_bancaria, observaciones)
+	VALUES (aux_id_operacion, '', 0, in_monto, in_id_cuenta_bancaria, 0, in_monto, in_id_cuenta_bancaria, CONCAT('Cliente : ', aux_cliente_usuario_referido, ' - Op : ', aux_codigo_operacion_referido));
+
+	RETURN QUERY SELECT aux_id_operacion, aux_codigo_operacion;
+END;
+$$ LANGUAGE plpgsql;
+--select * from Cargar_Bono_Referido(4, 1, 1000, 1 ,2);
+
 --------------Vistas de Monitoreo y Gestión---------------------
 --(excepto v_Cuenta_Bancaria_Activa)
 --DROP VIEW v_Console_Logs;
@@ -1405,6 +1443,8 @@ CREATE OR REPLACE VIEW v_Clientes_Cargas AS
 SELECT 	c.id_cliente,
 		c.cliente_usuario,
 		c.id_agente,
+		MAX(COALESCE(cr.cliente_usuario, ''))	AS cliente_usuario_referente,
+		MAX(COALESCE(cr.id_cliente, 0))			AS id_cliente_usuario_referente,
 		COALESCE(COUNT(o.id_operacion), 0) 		AS cantidad_cargas,
 		COALESCE(SUM(oc.importe), 0)			AS total_importe_cargas,
 		COALESCE(SUM(oc.bono), 0)				AS total_importe_bonos,
@@ -1416,6 +1456,14 @@ FROM cliente c LEFT JOIN operacion o
 			   AND o.id_estado = 2)
 		LEFT JOIN operacion_carga oc
 			ON (o.id_operacion = oc.id_operacion)
+		LEFT JOIN registro_token rt
+			ON (c.id_registro_token = rt.id_registro_token
+			   AND rt.de_agente = false
+			   AND rt.activo = true)
+		LEFT JOIN cliente cr
+			ON (rt.id_usuario = cr.id_cliente
+			   AND cr.marca_baja = false
+			   AND cr.bloqueado = false)
 WHERE c.marca_baja = false
 GROUP BY c.id_cliente, c.cliente_usuario, c.id_agente;
 --SELECT * FROM v_Clientes_Cargas;
@@ -1774,7 +1822,6 @@ SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 
 INTO aux_token;
 
 --select * from cliente_sesion
-
 
 select * from v_Console_Logs
 

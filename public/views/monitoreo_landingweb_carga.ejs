@@ -12,7 +12,7 @@
         }
     </style>
 </head>
-<body>
+<body> 
     <%if (message === 'ok') {%>
         <br>
         <table>
@@ -58,6 +58,15 @@
                     <input type="number" id="monto_bono" value="<%= datos[0].carga_bono %>">
                 </th>
             </tr>
+            <%if (datos_referente.cantidad_cargas == 0 && datos_referente.id_cliente_usuario_referente > 0) {%>
+                <tr>
+                    <th colspan = 2>
+                        <h3 class="warning">¡Al ser Primer Carga, 
+                            al usuario referente <%=datos_referente.cliente_usuario_referente %>,
+                            se le acreditarán fichas por el mismo monto del Bono</h3>
+                    </th>
+                </tr>
+            <%}%>
             <tr>
                 <th colspan = 2>   
                     <label for="cuenta_bancaria">Cuenta a la que envió:</label><br>
@@ -79,7 +88,7 @@
             <h3 class="warning">¡Al realizar esta acción, no habrá opción de Deshacer!</h3>
         </div>
         <div id="msgResultado" class="container">
-            <button onclick="cargar_Cobro(<%=datos[0].id_operacion %>, <%=datos[0].id_cliente %>);">Aceptar</button>
+            <button onclick="cargar_Cobro(<%=datos[0].id_operacion %>, <%=datos[0].id_cliente %>, <%=datos_referente.cantidad_cargas %>, <%=datos_referente.id_cliente_usuario_referente %>);">Aceptar</button>
             <button onclick="rechazar_Cobro(<%=datos[0].id_operacion %>, <%=datos[0].id_cliente %>);">Rechazar</button>
         </div>
     <%} else {%>

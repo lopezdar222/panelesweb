@@ -1090,6 +1090,7 @@ app.get('/monitoreo_landingweb_carga', async (req, res) => {
             return;
         }
         const datos = result.rows;
+        const id_cliente = result.rows[0].id_cliente;
 
         const query2 = `select   id_cuenta_bancaria,` +
                                 `nombre || ' - ' || alias || ' - ' || cbu as cuenta_bancaria ` +
@@ -1104,15 +1105,29 @@ app.get('/monitoreo_landingweb_carga', async (req, res) => {
                         `and carga_importe = ${datos[0].carga_importe} ` +
                         `and LOWER(carga_titular) = LOWER('${datos[0].carga_titular}') ` +
                         `order by fecha_hora_operacion desc limit 1`;
-        console.log(query3);
+        //console.log(query3);
         const result3 = await db.handlerSQL(query3);
         if (result3.rows.length > 0) {
             fecha_ult_carga_titular = result3.rows[0].fecha_hora_operacion;
         } else {
             fecha_ult_carga_titular = '(Sin Registro)';
         }
-        
-        res.render('monitoreo_landingweb_carga', { message: 'ok', title: 'Verificación de Carga', datos: datos, datos_cuentas : datos_cuentas, fecha_ult_carga_titular : fecha_ult_carga_titular });
+
+        const query4 = `select id_cliente_usuario_referente, cliente_usuario_referente, cantidad_cargas ` +
+                        `from v_Clientes_Cargas where id_cliente = ${id_cliente}`;
+        //console.log(query4);
+        const result4 = await db.handlerSQL(query4);
+        let datos_referente = '';
+        if (result4.rows.length > 0) {
+            datos_referente = result4.rows[0];
+        }
+
+        res.render('monitoreo_landingweb_carga', { message: 'ok', 
+                                                    title: 'Verificación de Carga', 
+                                                    datos: datos, 
+                                                    datos_cuentas : datos_cuentas, 
+                                                    fecha_ult_carga_titular : fecha_ult_carga_titular, 
+                                                    datos_referente : datos_referente });
     }
     catch (error) {
         res.render('monitoreo_landingweb_carga', { message: 'error', title: 'Verificación de Carga'});
@@ -1160,7 +1175,8 @@ app.get('/monitoreo_landingweb', async (req, res) => {
                                 `TO_CHAR(carga_bono, '999,999,999,999') as carga_bono_formato,` +
                                 `carga_importe,` +
                                 `carga_bono, ` +
-                                `carga_titular ` +
+                                `carga_titular, ` +
+                                `carga_observaciones ` +
                         `from v_Clientes_Operaciones where marca_baja = false`;
         if (id_rol > 1) {
             query2 = query2 + ` and id_oficina = ${id_oficina}`;
@@ -1536,6 +1552,43 @@ app.post('/cargar_cobro/:id_operacion/:id_usuario/:monto/:bono/:id_cuenta_bancar
         }
     } catch (error) {
         res.status(500).json({ message: 'Error al Cargar Cobro' });
+    }
+});
+
+app.post('/cargar_bono_referido/:id_cliente/:id_usuario/:bono/:id_cuenta_bancaria/:id_operacion', async (req, res) => {
+    try {
+        const { id_cliente, id_usuario, bono, id_cuenta_bancaria, id_operacion } = req.params;
+        const query = `select    cliente_usuario,` +
+                                `id_agente,` +
+                                `agente_usuario,` +
+                                `agente_password,` +
+                                `id_plataforma ` +
+        `from v_Clientes where id_cliente = ${id_cliente}`;
+        const result = await db.handlerSQL(query);
+
+        const cliente_usuario = result.rows[0].cliente_usuario;
+        const agente_nombre = result.rows[0].agente_usuario;
+        const agente_password = result.rows[0].agente_password;
+        const monto_total = Number(bono.trim());
+
+        let resultado = '';
+        if (result.rows[0].id_plataforma == 1) {
+            const carga_manual3 = require('./scrap_bot3/cargar.js');
+            resultado = await carga_manual3(cliente_usuario.trim(), String(monto_total), agente_nombre, agente_password);
+        }
+        //console.log(`Resultado carga = ${resultado}`);
+        if (resultado == 'ok') 
+        {
+            const query2 = `select * from Cargar_Bono_Referido(${id_cliente}, ${id_usuario}, ${monto_total}, ${id_cuenta_bancaria}, ${id_operacion})`;
+            await db.handlerSQL(query2);
+            res.status(201).json({ codigo : 1, message: `Carga de Bono Referido Exitosa!` });
+        } else if (resultado === 'error') {
+            res.status(500).json({ codigo : 2, message: 'Error al Cargar Fichas Bono Referente' });
+        } else if (resultado === 'en_espera') {
+            res.status(500).json({ codigo : 3, message: 'Servidor con Demora. Por favor, volver a intentar en unos segundos' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error al Cargar Fichas Bono Referente' });
     }
 });
 

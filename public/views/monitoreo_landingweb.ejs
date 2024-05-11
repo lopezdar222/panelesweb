@@ -49,7 +49,16 @@
                         </td>
                         <td><%= dato.codigo_operacion %></td>
                         <td><%= dato.accion %></td>
-                        <td><%= dato.estado %></td>
+                        <td><% if (dato.id_estado == 1) { %>
+                                <div class="warning"><%= dato.estado %></div>
+                            <% } else if (dato.id_estado == 2) { %>
+                                <div class="success"><%= dato.estado %></div>
+                            <% } else if (dato.id_estado == 3) { %>
+                                <div class="danger"><%= dato.estado %></div>
+                            <% } else { %>
+                                <%= dato.estado %>
+                            <% } %>
+                        </td> 
                         <% if (dato.id_accion == 1) { %>
                             <td>TOTAL: <%= dato.carga_importe_total_formato.replace(',','.') %>
                                 <br>(TITULAR : <%= dato.carga_titular %>)
@@ -66,6 +75,9 @@
                             <td><%= dato.retiro_importe %>
                                 <br><a onclick="abrirModal(29, <%=dato.id_operacion %>);"><h6 class="warning">(Ver Detalle)</h6></a>
                             </td>
+                        <% } else if (dato.id_accion == 9) { %>
+                            <td>BONO: <%= dato.carga_importe_total_formato.replace(',','.') %>
+                                <br>(<%= dato.carga_observaciones %>)
                         <% } else { %>
                             <td>-</td>
                         <% } %>
