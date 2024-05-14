@@ -9,13 +9,13 @@ async function cargar(id_cliente_ext, id_cliente_db, nombre, monto, agent_user, 
                 username : agent_user,
                 password : agent_pass
             },
-            /*user : {
+            user : {
                 id : id_cliente_ext,
                 db : id_cliente_db
-            },*/
-            user : {
-                username : nombre
             },
+            /*user : {
+                username : nombre
+            },*/
             amount : monto
         };
         

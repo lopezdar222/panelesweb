@@ -1271,6 +1271,8 @@ app.post('/cargar_retiro_manual/:id_cliente/:id_usuario/:monto_importe/:cbu/:tit
         observacion = observacion.replace('<<','/');
         titular = titular.replace('<<','/');
         const query = `select    id_cliente,` +
+                                `id_cliente_ext,` +
+                                `id_cliente_db,` +
                                 `cliente_usuario,` +
                                 `agente_usuario,` +
                                 `agente_password,` +
@@ -1279,13 +1281,15 @@ app.post('/cargar_retiro_manual/:id_cliente/:id_usuario/:monto_importe/:cbu/:tit
         const result = await db.handlerSQL(query);
 
         const cliente_usuario = result.rows[0].cliente_usuario;
+        const id_cliente_ext = result.rows[0].id_cliente_ext;
+        const id_cliente_db = result.rows[0].id_cliente_db;
         const agente_nombre = result.rows[0].agente_usuario;
         const agente_password = result.rows[0].agente_password;
 
         let resultado = '';
         if (result.rows[0].id_plataforma == 1) {
             const retiro_manual3 = require('./scrap_bot3/retirar.js');
-            resultado = await retiro_manual3(cliente_usuario.trim(), String(monto_importe), agente_nombre, agente_password);
+            resultado = await retiro_manual3(id_cliente_ext, id_cliente_db, cliente_usuario.trim(), String(monto_importe), agente_nombre, agente_password);
         }
         //console.log(`Resultado carga = ${resultado}`);
         if (resultado == 'ok')

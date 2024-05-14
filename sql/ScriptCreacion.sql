@@ -482,23 +482,27 @@ BEGIN
 		INTO aux_id_agente, aux_bono_creacion, aux_bono_carga_1
 		FROM agente
 		WHERE agente_usuario = in_agente;
+		
+		IF aux_id_agente > 0 THEN
+			INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion, id_cliente_ext, id_cliente_db)
+			VALUES (lower(in_usuario), in_password, aux_id_agente, true, false, now(), 1,  now(), 1, in_cliente_ext, in_cliente_db)
+			RETURNING cliente.id_cliente INTO aux_id_cliente;
 
-		INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion, id_cliente_ext, id_cliente_db)
-		VALUES (lower(in_usuario), in_password, aux_id_agente, true, false, now(), 1,  now(), 1, in_cliente_ext, in_cliente_db)
-		RETURNING cliente.id_cliente INTO aux_id_cliente;
+			INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+			VALUES (1, 7, aux_id_cliente, 2, true, false, now(), now(), 1);
 
-		INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-		VALUES (1, 7, aux_id_cliente, 2, true, false, now(), now(), 1);
+			SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
+			INTO aux_token;
 
-		SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
-		INTO aux_token;
+			INSERT INTO registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, bono_creacion, bono_carga_1, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+			VALUES (CONCAT('c-', aux_id_cliente::varchar, '-', aux_token), false, true, aux_id_cliente, 0, 0, aux_bono_creacion, aux_bono_carga_1, now(), now(), 1);
 
-		INSERT INTO registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, bono_creacion, bono_carga_1, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-		VALUES (CONCAT('c-', aux_id_cliente::varchar, '-', aux_token), false, true, aux_id_cliente, 0, 0, aux_bono_creacion, aux_bono_carga_1, now(), now(), 1);
-
-		IF (aux_id_cliente > 0) THEN
-			INSERT INTO cliente_sesion (id_cliente, id_token, ip, fecha_hora_creacion, monto, moneda)
-			VALUES (aux_id_cliente, in_id_token, in_ip, now(), in_monto, in_moneda);
+			IF (aux_id_cliente > 0) THEN
+				INSERT INTO cliente_sesion (id_cliente, id_token, ip, fecha_hora_creacion, monto, moneda)
+				VALUES (aux_id_cliente, in_id_token, in_ip, now(), in_monto, in_moneda);
+			END IF;
+		ELSE
+			aux_id_cliente := -3;
 		END IF;
 	ELSE
 		aux_id_cliente := -2;
