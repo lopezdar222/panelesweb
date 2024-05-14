@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-async function cargar(nombre, monto, agent_user, agent_pass) {
+async function cargar(id_cliente_ext, id_cliente_db, nombre, monto, agent_user, agent_pass) {
     try {
         const url = `https://wallet-uat.emaraplay.com/bot/user/deposit`;
         // Datos que deseas enviar en la petición POST
@@ -9,6 +9,10 @@ async function cargar(nombre, monto, agent_user, agent_pass) {
                 username : agent_user,
                 password : agent_pass
             },
+            /*user : {
+                id : id_cliente_ext,
+                db : id_cliente_db
+            },*/
             user : {
                 username : nombre
             },

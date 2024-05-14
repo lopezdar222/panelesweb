@@ -141,6 +141,8 @@ CREATE TABLE IF NOT EXISTS cliente
     id_cliente serial NOT NULL,
     cliente_usuario character varying(200) NOT NULL,
     cliente_password character varying(200) NOT NULL,
+	id_cliente_ext BIGINT NOT NULL DEFAULT 0,
+	id_cliente_db INTEGER NOT NULL DEFAULT 0,
     id_agente integer NOT NULL,
     en_sesion boolean NOT NULL DEFAULT false,
     marca_baja boolean NOT NULL DEFAULT false,
@@ -155,6 +157,8 @@ CREATE TABLE IF NOT EXISTS cliente
     PRIMARY KEY (id_cliente)
 );
 CREATE INDEX cliente_id_agente ON cliente (id_agente);
+
+select * from cliente order by 1
 
 DROP TABLE IF EXISTS cliente_sesion;
 CREATE TABLE IF NOT EXISTS cliente_sesion
@@ -171,6 +175,15 @@ CREATE TABLE IF NOT EXISTS cliente_sesion
     PRIMARY KEY (id_cliente_sesion)
 );
 CREATE INDEX cliente_sesion_id_cliente ON cliente_sesion (id_cliente);
+
+DROP TABLE IF EXISTS registro_sesiones_sockets;
+CREATE TABLE IF NOT EXISTS registro_sesiones_sockets
+(
+    id_registro_sesiones_sockets serial NOT NULL,
+    fecha_hora timestamp NOT NULL,
+    conexiones integer NOT NULL DEFAULT 0,
+    PRIMARY KEY (id_registro_sesiones_sockets)
+);
 
 DROP TABLE IF EXISTS cliente_chat;
 CREATE TABLE IF NOT EXISTS cliente_chat
@@ -294,7 +307,9 @@ CREATE TABLE IF NOT EXISTS estado
 
 /*****************************************************************************/
 insert into plataforma (plataforma, url_admin, url_juegos, marca_baja)
-values ('Casino 365 Club', 'https://bo.casinoenvivo.club', 'https://www.casino365online.club', false);
+values ('Casino 365 Online', 'https://bo.casinoenvivo.club', 'https://www.casino365online.club', false);
+insert into plataforma (plataforma, url_admin, url_juegos, marca_baja)
+values ('Casino 365 Vip', 'https://bo.casinoenvivo.club', 'https://www.casino365vip.club', false);
 
 insert into rol (nombre_rol, fecha_hora_creacion) values ('Administrador', NOW());
 insert into rol (nombre_rol, fecha_hora_creacion) values ('Encargado', NOW());
@@ -401,6 +416,99 @@ $$ LANGUAGE plpgsql;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+--DROP FUNCTION Confirmar_Sesion_Cliente_Id(in_id_cliente INTEGER, in_id_token VARCHAR(30), in_ip VARCHAR(100), in_monto NUMERIC, in_moneda VARCHAR(30))
+CREATE OR REPLACE FUNCTION Confirmar_Sesion_Cliente_Id(in_id_cliente INTEGER, in_id_token VARCHAR(30), in_ip VARCHAR(100), in_monto NUMERIC, in_moneda VARCHAR(30))
+RETURNS TABLE (id_cliente INTEGER) AS $$
+DECLARE
+    aux_id_cliente INTEGER;
+    aux_bloqueado BOOLEAN;
+BEGIN
+	IF NOT EXISTS (SELECT 1
+					FROM cliente_sesion cls join cliente cl 
+						ON (cls.id_cliente = cl.id_cliente
+							AND cls.ip = in_ip
+							AND cl.bloqueado = true))
+	THEN 
+	
+		SELECT cl.id_cliente, cl.bloqueado
+		INTO aux_id_cliente, aux_bloqueado
+		FROM cliente cl 
+		WHERE cl.id_cliente = in_id_cliente;
+
+		IF (aux_bloqueado) THEN
+			aux_id_cliente := -1;
+		END IF;	
+		
+		IF (aux_id_cliente > 0) THEN
+			UPDATE cliente_sesion
+			SET cierre_abrupto = true,
+				fecha_hora_cierre = now()
+			WHERE cliente_sesion.id_cliente = aux_id_cliente
+				AND cliente_sesion.fecha_hora_cierre IS NULL;
+
+			INSERT INTO cliente_sesion (id_cliente, id_token, ip, fecha_hora_creacion, monto, moneda)
+			VALUES (aux_id_cliente, in_id_token, in_ip, now(), in_monto, in_moneda);
+
+			UPDATE cliente
+			SET en_sesion = true
+			WHERE cliente.id_cliente = aux_id_cliente;
+		END IF;
+	ELSE
+		aux_id_cliente := -2;
+	END IF;
+	
+	RETURN QUERY SELECT aux_id_cliente;
+END;
+$$ LANGUAGE plpgsql;
+
+--DROP FUNCTION Confirmar_Sesion_Cliente_Registro(in_agente VARCHAR(200), in_usuario VARCHAR(200), in_password VARCHAR(200), in_id_token VARCHAR(30), in_ip VARCHAR(100), in_monto NUMERIC, in_moneda VARCHAR(30), in_cliente_ext BIGINT, in_cliente_db INTEGER);
+CREATE OR REPLACE FUNCTION Confirmar_Sesion_Cliente_Registro(in_agente VARCHAR(200), in_usuario VARCHAR(200), in_password VARCHAR(200), in_id_token VARCHAR(30), in_ip VARCHAR(100), in_monto NUMERIC, in_moneda VARCHAR(30), in_cliente_ext BIGINT, in_cliente_db INTEGER)
+RETURNS TABLE (id_cliente INTEGER) AS $$
+DECLARE
+    aux_id_cliente INTEGER;
+    aux_id_agente INTEGER;
+    aux_bloqueado BOOLEAN;
+	aux_token VARCHAR(60);
+	aux_bono_carga_1 INTEGER;
+	aux_bono_creacion INTEGER;
+BEGIN
+	IF NOT EXISTS (SELECT 1
+					FROM cliente_sesion cls join cliente cl 
+						ON (cls.id_cliente = cl.id_cliente
+							AND cls.ip = in_ip
+							AND cl.bloqueado = true))
+	THEN 
+		SELECT id_agente, tokens_bono_creacion, tokens_bono_carga_1
+		INTO aux_id_agente, aux_bono_creacion, aux_bono_carga_1
+		FROM agente
+		WHERE agente_usuario = in_agente;
+
+		INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion, id_cliente_ext, id_cliente_db)
+		VALUES (lower(in_usuario), in_password, aux_id_agente, true, false, now(), 1,  now(), 1, in_cliente_ext, in_cliente_db)
+		RETURNING cliente.id_cliente INTO aux_id_cliente;
+
+		INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+		VALUES (1, 7, aux_id_cliente, 2, true, false, now(), now(), 1);
+
+		SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
+		INTO aux_token;
+
+		INSERT INTO registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, bono_creacion, bono_carga_1, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+		VALUES (CONCAT('c-', aux_id_cliente::varchar, '-', aux_token), false, true, aux_id_cliente, 0, 0, aux_bono_creacion, aux_bono_carga_1, now(), now(), 1);
+
+		IF (aux_id_cliente > 0) THEN
+			INSERT INTO cliente_sesion (id_cliente, id_token, ip, fecha_hora_creacion, monto, moneda)
+			VALUES (aux_id_cliente, in_id_token, in_ip, now(), in_monto, in_moneda);
+		END IF;
+	ELSE
+		aux_id_cliente := -2;
+	END IF;
+	
+	RETURN QUERY SELECT aux_id_cliente;
+END;
+$$ LANGUAGE plpgsql;
+
+
 --DROP FUNCTION Confirmar_Sesion_Cliente(in_agente VARCHAR(200), in_usuario VARCHAR(200), in_password VARCHAR(200), in_id_token VARCHAR(30), in_ip VARCHAR(100), in_monto NUMERIC, in_moneda VARCHAR(30));
 CREATE OR REPLACE FUNCTION Confirmar_Sesion_Cliente(in_agente VARCHAR(200), in_usuario VARCHAR(200), in_password VARCHAR(200), in_id_token VARCHAR(30), in_ip VARCHAR(100), in_monto NUMERIC, in_moneda VARCHAR(30))
 RETURNS TABLE (id_cliente INTEGER) AS $$
@@ -450,12 +558,12 @@ BEGIN
 			WHERE agente_usuario = in_agente;
 
 			INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-			VALUES (in_usuario, in_password, aux_id_agente, true, false, now(), 1,  now(), 1)
+			VALUES (lower(in_usuario), in_password, aux_id_agente, true, false, now(), 1,  now(), 1)
 			RETURNING cliente.id_cliente INTO aux_id_cliente;
 			
 			INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-			VALUES (1, 7, aux_id_cliente, 2, false, false, now(), now(), 1);
-			
+			VALUES (1, 7, aux_id_cliente, 2, true, false, now(), now(), 1);
+
 			SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
 			INTO aux_token;
 			
@@ -484,8 +592,8 @@ $$ LANGUAGE plpgsql;
 --select * from cliente
 --select * from cliente_sesion
 
---DROP FUNCTION Registrar_Cliente(in_id_agente INTEGER, in_usuario VARCHAR(200), in_password VARCHAR(200), in_correo_electronico VARCHAR(100), in_telefono VARCHAR(100), in_id_registro_token INTEGER)
-CREATE OR REPLACE FUNCTION Registrar_Cliente(in_id_agente INTEGER, in_usuario VARCHAR(200), in_password VARCHAR(200), in_correo_electronico VARCHAR(100), in_telefono VARCHAR(100), in_id_registro_token INTEGER)
+--DROP FUNCTION Registrar_Cliente(in_id_agente INTEGER, in_usuario VARCHAR(200), in_password VARCHAR(200), in_correo_electronico VARCHAR(100), in_telefono VARCHAR(100), in_id_registro_token INTEGER, in_id_cliente_ext BIGINT, id_cliente_bd INTEGER)
+CREATE OR REPLACE FUNCTION Registrar_Cliente(in_id_agente INTEGER, in_usuario VARCHAR(200), in_password VARCHAR(200), in_correo_electronico VARCHAR(100), in_telefono VARCHAR(100), in_id_registro_token INTEGER, in_id_cliente_ext BIGINT, in_id_cliente_db INTEGER)
 RETURNS TABLE (id_cliente INTEGER) AS $$
 DECLARE
     aux_id_cliente INTEGER;
@@ -493,12 +601,12 @@ DECLARE
 	aux_bono_carga_1 INTEGER;
 	aux_bono_creacion INTEGER;
 BEGIN
-	INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion, id_registro_token, correo_electronico, telefono)
-	VALUES (in_usuario, in_password, in_id_agente, false, false, now(), 1,  now(), 1, in_id_registro_token, in_correo_electronico, in_telefono)
+	INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion, id_registro_token, correo_electronico, telefono, id_cliente_ext, id_cliente_db)
+	VALUES (lower(in_usuario), in_password, in_id_agente, false, false, now(), 1,  now(), 1, in_id_registro_token, in_correo_electronico, in_telefono, in_id_cliente_ext, in_id_cliente_db)
 	RETURNING cliente.id_cliente INTO aux_id_cliente;
 
 	INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-	VALUES (1, 8, aux_id_cliente, 2, false, false, now(), now(), 1);
+	VALUES (1, 8, aux_id_cliente, 2, true, false, now(), now(), 1);
 
 	SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
 	INTO aux_token;
@@ -520,6 +628,8 @@ CREATE OR REPLACE FUNCTION Obtener_Cliente_Token(in_id_cliente INTEGER, in_id_to
 RETURNS TABLE (id_cliente INTEGER, 
 				id_agente INTEGER, 
 				cliente_usuario VARCHAR(100), 
+			   	id_cliente_ext BIGINT,
+			   	id_cliente_db INTEGER,
 				monto NUMERIC, 
 				moneda VARCHAR(30),
 				id_oficina INTEGER,
@@ -540,6 +650,8 @@ BEGIN
 	RETURN QUERY SELECT cl.id_cliente, 
 						cl.id_agente, 
 						cl.cliente_usuario, 
+						cl.id_cliente_ext,
+						cl.id_cliente_db,
 						cls.monto, 
 						cls.moneda,
 						o.id_oficina,
@@ -580,6 +692,41 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 --select * from Obtener_Cliente_Token(2, 'ejemplo');
+
+--DROP FUNCTION Obtener_Cliente_Alertas(in_id_cliente INTEGER);
+CREATE OR REPLACE FUNCTION Obtener_Cliente_Alertas(in_id_cliente INTEGER)
+RETURNS TABLE (	pendientes_mensajes INTEGER, 
+				pendientes_operaciones INTEGER) AS $$
+DECLARE
+	aux_pendientes_mensajes INTEGER;
+	aux_pendientes_operaciones INTEGER;
+BEGIN
+	SELECT	COUNT(ch.id_cliente_chat)
+	INTO aux_pendientes_mensajes
+	FROM cliente_chat ch
+	WHERE ch.id_cliente = in_id_cliente
+	AND ch.visto_cliente = false;
+	
+	IF aux_pendientes_mensajes IS NULL THEN
+		aux_pendientes_mensajes := 0;
+	END IF;
+	
+	SELECT	COUNT(op.id_operacion)
+	INTO aux_pendientes_operaciones
+	FROM operacion op
+	WHERE op.id_cliente = in_id_cliente
+	AND op.notificado = false
+	AND op.marca_baja = false
+	AND op.id_accion in (1, 2, 5, 6, 9);
+	
+	IF aux_pendientes_operaciones IS NULL THEN
+		aux_pendientes_operaciones := 0;
+	END IF;
+	
+	RETURN QUERY SELECT aux_pendientes_mensajes, aux_pendientes_operaciones;
+END;
+$$ LANGUAGE plpgsql;
+--select * from Obtener_Cliente_Alertas(4);
 
 --DROP FUNCTION Cerrar_Sesion_Cliente(in_id_cliente INTEGER, in_id_token VARCHAR(30));
 CREATE OR REPLACE FUNCTION Cerrar_Sesion_Cliente(in_id_cliente INTEGER, in_id_token VARCHAR(30)) RETURNS VOID AS $$
@@ -827,7 +974,7 @@ FROM 	cuenta_bancaria cb join oficina o
 									and op.marca_baja = false
 									and op.id_accion IN (1,5)  --accion de carga
 									and op.id_estado = 2) --estado aceptado
-				   			join (select 	id_cuenta_bancaria, 
+				   			left join (select 	id_cuenta_bancaria, 
 											max(fecha_hora_descarga) as fecha_descarga
 										from cuenta_bancaria_descarga
 										where marca_baja = false
@@ -920,7 +1067,7 @@ BEGIN
 	WHERE c.id_cliente = in_id_cliente;
 	
 	INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-	VALUES (aux_codigo_operacion, in_id_accion, in_id_cliente, aux_id_estado, false, false, now(), now(), 1)
+	VALUES (aux_codigo_operacion, in_id_accion, in_id_cliente, aux_id_estado, true, false, now(), now(), 1)
 	RETURNING operacion.id_operacion INTO aux_id_operacion;
 	
 	IF (in_id_accion = 1) THEN
@@ -1492,6 +1639,8 @@ GROUP BY c.id_cliente, c.cliente_usuario, c.id_agente;
 CREATE OR REPLACE VIEW v_Clientes_Operaciones AS
 SELECT 	cl.id_cliente,
 		cl.cliente_usuario,
+		cl.id_cliente_ext,
+		cl.id_cliente_db,
 		cl.id_agente,
 		ag.agente_usuario,
 		ag.agente_password,
@@ -1560,6 +1709,8 @@ SELECT 	cl.id_cliente,
 		cl.cliente_password,
 		cl.bloqueado,
 		cl.id_agente,
+		cl.id_cliente_ext,
+		cl.id_cliente_db,
 		ag.agente_usuario,
 		ag.agente_password,
 		ag.id_plataforma,
@@ -1647,7 +1798,36 @@ FROM	cliente cl JOIN registro_token rt
 		LEFT JOIN cliente clr
 			ON (rtr.de_agente = false AND rtr.id_usuario = clr.id_cliente);
 --SELECT * FROM v_Cliente_Registro
-			
+
+--DROP VIEW v_Cliente_Alertas
+CREATE OR REPLACE VIEW v_Cliente_Alertas AS
+SELECT 	cl.id_cliente,
+		cl.cliente_usuario,
+		cl.cliente_password,
+		cl.fecha_hora_creacion,
+		cl.correo_electronico,
+		cl.telefono,
+		rto.id_token,
+		rto.ingresos,
+		rto.registros,
+		rto.cargaron,
+		rto.total_cargas,
+		rto.total_importe,
+		rto.total_bono,
+		COALESCE(rtr.id_registro_token, 0)	AS id_registro_token,
+		COALESCE(rtr.de_agente, false)		AS de_agente,
+		COALESCE(clr.cliente_usuario, '')	AS cliente_referente
+FROM	cliente cl JOIN registro_token rt
+			ON (rt.de_agente = false
+			   AND rt.id_usuario = cl.id_cliente)
+		JOIN v_Tokens_Operacion rto
+			ON (rt.id_registro_token = rto.id_registro_token)
+		LEFT JOIN registro_token rtr
+			ON (cl.id_registro_token  = rtr.id_registro_token)
+		LEFT JOIN cliente clr
+			ON (rtr.de_agente = false AND rtr.id_usuario = clr.id_cliente);
+--SELECT * FROM v_Cliente_Registro
+
 --DROP VIEW v_Tokens
 CREATE OR REPLACE VIEW v_Tokens AS
 SELECT 	rt.id_registro_token,
@@ -1767,7 +1947,6 @@ GROUP BY tk.id_oficina,
 		tk.de_agente;
 --select * from v_Tokens_Completo;
 
-
 --DROP VIEW v_Tokens_Completo_Clientes
 CREATE OR REPLACE VIEW v_Tokens_Completo_Clientes AS
 SELECT 	tk.id_registro_token,
@@ -1823,9 +2002,52 @@ INTO aux_token;
 
 --select * from cliente_sesion
 
+select 	oficina,
+		agente_usuario, 
+		plataforma,
+		sum(carga_importe)	as cargas,
+		sum(carga_bono)		as bonos,
+		sum(CASE WHEN id_accion in (1, 5, 9) THEN 1 ELSE 0 END) as cant_cargas,
+		sum(retiro_importe)	as retiros,
+		sum(CASE WHEN id_accion in (2, 6) THEN 1 ELSE 0 END) as cant_retiros
+from v_Clientes_Operaciones
+where id_oficina = 2
+and id_estado = 2
+and id_accion in (1, 2, 5, 6, 9)
+group by oficina,
+		agente_usuario, 
+		plataforma;
+ 
+select * from v_Clientes
+ 
+select * from cliente order by 1 desc limit 100
+select * from cliente_sesion order by 1 desc
+
+select * from cliente where cliente_usuario = 'dario110'
+update cliente set id_cliente_ext = 5002299118, id_cliente_db = 2 where id_cliente = 4;
+
+SELECT * FROM registro_sesiones_sockets order by 1 desc limit 20
+
+select * from operacion_carga order by 1 desc
+
+
+select * from plataforma
+
 select * from v_Console_Logs
 
-select * from cliente
+select * from v_Cuenta_Bancaria_Activa
+where id_oficina = 2
+
+select * from v_Clientes_Operaciones where codigo_operacion = 3 and cliente_usuario = 'Prueba123'
+
+select * from cliente where cliente_usuario = 'Vascoprueba'
+
+select lower(cliente_usuario), * from cliente order by 2 desc
+
+update cliente set cliente_usuario = lower(cliente_usuario)
+
+select * from registro_token where id_registro_token = 20
+select * from cliente where id_cliente = 12
 select * from agente
 select * from plataforma
 select * from oficina

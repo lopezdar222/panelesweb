@@ -1091,16 +1091,17 @@ app.get('/monitoreo_landingweb_carga', async (req, res) => {
         }
         const datos = result.rows;
         const id_cliente = result.rows[0].id_cliente;
+        const id_oficina_operacion = result.rows[0].id_oficina;
 
         const query2 = `select   id_cuenta_bancaria,` +
                                 `nombre || ' - ' || alias || ' - ' || cbu as cuenta_bancaria ` +
-        `from v_Cuentas_Bancarias where marca_baja = false and id_oficina = ${id_oficina}`;
+        `from v_Cuentas_Bancarias where marca_baja = false and id_oficina = ${id_oficina_operacion}`;
         const result2 = await db.handlerSQL(query2);
         const datos_cuentas = result2.rows;
 
         let fecha_ult_carga_titular = '';
         const query3 = `select TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_operacion ` +
-                        `from v_Clientes_Operaciones where id_oficina = ${id_oficina} ` +
+                        `from v_Clientes_Operaciones where id_oficina = ${id_oficina_operacion} ` +
                         `and id_estado = 2 and id_accion in (1,5) ` +
                         `and carga_importe = ${datos[0].carga_importe} ` +
                         `and LOWER(carga_titular) = LOWER('${datos[0].carga_titular}') ` +
@@ -1315,6 +1316,8 @@ app.post('/cargar_cobro_manual/:id_cliente/:id_usuario/:monto_importe/:monto_bon
         observacion = observacion.replace('<<','/');
         titular = titular.replace('<<','/');
         const query = `select    id_cliente,` +
+                                `id_cliente_ext,` +
+                                `id_cliente_db,` +
                                 `cliente_usuario,` +
                                 `agente_usuario,` +
                                 `agente_password,` +
@@ -1323,14 +1326,16 @@ app.post('/cargar_cobro_manual/:id_cliente/:id_usuario/:monto_importe/:monto_bon
         const result = await db.handlerSQL(query);
 
         const cliente_usuario = result.rows[0].cliente_usuario;
+        const id_cliente_ext = result.rows[0].id_cliente_ext;
+        const id_cliente_db = result.rows[0].id_cliente_db;
         const agente_nombre = result.rows[0].agente_usuario;
         const agente_password = result.rows[0].agente_password;
         const monto_total = Number(monto_importe) + Number(monto_bono);
 
         let resultado = '';
-        if (result.rows[0].id_plataforma == 1) {
+        if (result.rows[0].id_plataforma == 1 || result.rows[0].id_plataforma == 2) {
             const carga_manual3 = require('./scrap_bot3/cargar.js');
-            resultado = await carga_manual3(cliente_usuario.trim(), String(monto_total), agente_nombre, agente_password);
+            resultado = await carga_manual3(id_cliente_ext, id_cliente_db, cliente_usuario.trim(), String(monto_total), agente_nombre, agente_password);
         }
         //console.log(`Resultado carga = ${resultado}`);
         if (resultado == 'ok') 
@@ -1462,13 +1467,12 @@ app.post('/registrar_agente/:id_usuario/:usuario/:password/:id_oficina/:id_plata
         const result1 = await db.handlerSQL(queryChek);
         //console.log(queryChek);
         if (result1.rows.length > 0) {
-            res.status(401).json({ message: 'El Agente ya existe!' });
+            res.status(201).json({ message: 'El Agente ya existe!' });
             return;
         }
-
         const query = `select Insertar_Agente(${id_usuario}, '${usuario}', '${password}', ${id_oficina}, ${id_plataforma}, ${bono_carga_1}, ${bono_creacion})`;
-        const result2 = await db.handlerSQL(query);
         //console.log(query);
+        await db.handlerSQL(query);
 
         res.status(201).json({ message: 'Agente registrado exitosamente.' });
     } catch (error) {
@@ -1520,26 +1524,34 @@ app.post('/cargar_cobro/:id_operacion/:id_usuario/:monto/:bono/:id_cuenta_bancar
     try {
         const { id_operacion, id_usuario, monto, bono, id_cuenta_bancaria } = req.params;
         const query = `select    cliente_usuario,` +
+                                `id_cliente_ext,` +
+                                `id_cliente_db,` +
                                 `id_agente,` +
                                 `agente_usuario,` +
                                 `agente_password,` +
                                 `id_plataforma ` +
         `from v_Clientes_Operaciones where id_operacion = ${id_operacion}`;
         const result = await db.handlerSQL(query);
-
+        
         const cliente_usuario = result.rows[0].cliente_usuario;
+        const id_cliente_ext = result.rows[0].id_cliente_ext;
+        const id_cliente_db = result.rows[0].id_cliente_db;
         const agente_nombre = result.rows[0].agente_usuario;
         const agente_password = result.rows[0].agente_password;
         const monto_carga = Number(monto.trim());
         const monto_bono = Number(bono.trim());
         const monto_total = monto_carga + monto_bono;
+        
+        /*console.log(`Agente Nombre = ${agente_nombre}`);
+        console.log(`Agente Password = ${agente_password}`);
+        console.log(`Agente Password = ${cliente_usuario}`);*/
 
         let resultado = '';
-        if (result.rows[0].id_plataforma == 1) {
+        if (result.rows[0].id_plataforma == 1 || result.rows[0].id_plataforma == 2) {
             const carga_manual3 = require('./scrap_bot3/cargar.js');
-            resultado = await carga_manual3(cliente_usuario.trim(), String(monto_total), agente_nombre, agente_password);
+            resultado = await carga_manual3(id_cliente_ext, id_cliente_db, cliente_usuario.trim(), String(monto_total), agente_nombre, agente_password);
         }
-        //console.log(`Resultado carga = ${resultado}`);
+        console.log(`Resultado carga = ${resultado}`);
         if (resultado == 'ok') 
         {
             const query2 = `select * from Modificar_Cliente_Carga(${id_operacion}, 2, ${monto_carga}, ${monto_bono}, ${id_cuenta_bancaria}, ${id_usuario})`;
@@ -1559,6 +1571,8 @@ app.post('/cargar_bono_referido/:id_cliente/:id_usuario/:bono/:id_cuenta_bancari
     try {
         const { id_cliente, id_usuario, bono, id_cuenta_bancaria, id_operacion } = req.params;
         const query = `select    cliente_usuario,` +
+                                `id_cliente_ext,` +
+                                `id_cliente_db,` +
                                 `id_agente,` +
                                 `agente_usuario,` +
                                 `agente_password,` +
@@ -1567,14 +1581,16 @@ app.post('/cargar_bono_referido/:id_cliente/:id_usuario/:bono/:id_cuenta_bancari
         const result = await db.handlerSQL(query);
 
         const cliente_usuario = result.rows[0].cliente_usuario;
+        const id_cliente_ext = result.rows[0].id_cliente_ext;
+        const id_cliente_db = result.rows[0].id_cliente_db;
         const agente_nombre = result.rows[0].agente_usuario;
         const agente_password = result.rows[0].agente_password;
         const monto_total = Number(bono.trim());
 
         let resultado = '';
-        if (result.rows[0].id_plataforma == 1) {
+        if (result.rows[0].id_plataforma == 1 || result.rows[0].id_plataforma == 2) {
             const carga_manual3 = require('./scrap_bot3/cargar.js');
-            resultado = await carga_manual3(cliente_usuario.trim(), String(monto_total), agente_nombre, agente_password);
+            resultado = await carga_manual3(id_cliente_ext, id_cliente_db, cliente_usuario.trim(), String(monto_total), agente_nombre, agente_password);
         }
         //console.log(`Resultado carga = ${resultado}`);
         if (resultado == 'ok') 
@@ -1743,8 +1759,8 @@ app.post('/descargar_cuenta_bancaria/:id_usuario/:id_cuenta_bancaria', async (re
         res.status(500).json({ message: 'Error al Descargar Cuenta Bancaria' });
     }
 });
-
-app.post('/modificar_cuenta_bancaria/:id_usuario_modi/:id_usuario/:id_cuenta_bancaria/:nombre/:alias/:cbu/:estado', async (req, res) => {
+ 
+app.post('/modificar_cuenta_bancaria/:id_usuario/:id_cuenta_bancaria/:nombre/:alias/:cbu/:estado', async (req, res) => {
     try {    
             const { id_usuario, id_cuenta_bancaria, nombre, alias, cbu, estado } = req.params;
             let alias_aux  = '';
@@ -1762,7 +1778,7 @@ app.post('/modificar_cuenta_bancaria/:id_usuario_modi/:id_usuario/:id_cuenta_ban
                                 `and marca_baja = false and id_cuenta_bancaria != ${id_cuenta_bancaria}`;
                 //console.log(query0);
                 const result0 = await db.handlerSQL(query0);
-                console.log(result0.rows[0].cantidad);
+                //console.log(result0.rows[0].cantidad);
                 if (result0.rows[0].cantidad == 0) {
                     alertaInactivas = 1;
                 }

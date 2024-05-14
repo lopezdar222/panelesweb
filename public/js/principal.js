@@ -1274,7 +1274,7 @@ const cargar_Cobro = async (id_operacion, id_cliente, cantidad_cargas, id_client
         if (data.codigo == 1) {
             enviarMensaje('sol_carga_aceptada', id_cliente);
         }
-        if (cantidad_cargas == 0) {
+        if (cantidad_cargas == 0 && id_cliente_referente > 0) {
             msgBonoReferido = await cargar_Bono_Referido(id_cliente_referente, monto_bono.value, id_cuenta_bancaria, id_operacion);
             msgResultado.innerHTML = data.message + ' - ' + msgBonoReferido;
         } else {
