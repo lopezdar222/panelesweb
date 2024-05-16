@@ -11,14 +11,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const username = document.getElementById('loginusername').value;
         const password = document.getElementById('loginpassword').value;
         const version = 'web';
-        const ipAddress = await fetch('https://api64.ipify.org?format=json')
+        const ipAddress = '';
+        /*const ipAddress = await fetch('https://api64.ipify.org?format=json')
         .then(response => response.json())
         .then(data => {
             return data.ip;
         })
         .catch(error => {
             return '0.0.0.0';
-        });
+        });*/
 
         try {
             if (username != '' & password != '') {

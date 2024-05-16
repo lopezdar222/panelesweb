@@ -484,20 +484,37 @@ BEGIN
 		WHERE agente_usuario = in_agente;
 		
 		IF aux_id_agente > 0 THEN
-			INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion, id_cliente_ext, id_cliente_db)
-			VALUES (lower(in_usuario), in_password, aux_id_agente, true, false, now(), 1,  now(), 1, in_cliente_ext, in_cliente_db)
-			RETURNING cliente.id_cliente INTO aux_id_cliente;
+			
+			SELECT	cl.id_cliente
+			INTO aux_id_cliente
+			FROM cliente cl
+			WHERE 	lower(cl.cliente_usuario) = lower(in_usuario)
+			AND 	cl.id_agente = aux_id_agente
+			AND 	cl.marca_baja = false;
+			
+			IF aux_id_cliente > 0 THEN
+			
+				UPDATE cliente
+				SET en_sesion = true, 
+					cliente_password = in_password
+				WHERE cliente.id_cliente = aux_id_cliente;
+				
+			ELSE			
+				INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion, id_cliente_ext, id_cliente_db)
+				VALUES (lower(in_usuario), in_password, aux_id_agente, true, false, now(), 1,  now(), 1, in_cliente_ext, in_cliente_db)
+				RETURNING cliente.id_cliente INTO aux_id_cliente;
 
-			INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-			VALUES (1, 7, aux_id_cliente, 2, true, false, now(), now(), 1);
+				INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+				VALUES (1, 7, aux_id_cliente, 2, true, false, now(), now(), 1);
 
-			SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
-			INTO aux_token;
+				SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
+				INTO aux_token;
 
-			INSERT INTO registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, bono_creacion, bono_carga_1, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-			VALUES (CONCAT('c-', aux_id_cliente::varchar, '-', aux_token), false, true, aux_id_cliente, 0, 0, aux_bono_creacion, aux_bono_carga_1, now(), now(), 1);
-
-			IF (aux_id_cliente > 0) THEN
+				INSERT INTO registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, bono_creacion, bono_carga_1, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+				VALUES (CONCAT('c-', aux_id_cliente::varchar, '-', aux_token), false, true, aux_id_cliente, 0, 0, aux_bono_creacion, aux_bono_carga_1, now(), now(), 1);
+			END IF;
+			
+			IF aux_id_cliente > 0 THEN
 				INSERT INTO cliente_sesion (id_cliente, id_token, ip, fecha_hora_creacion, monto, moneda)
 				VALUES (aux_id_cliente, in_id_token, in_ip, now(), in_monto, in_moneda);
 			END IF;
@@ -511,7 +528,6 @@ BEGIN
 	RETURN QUERY SELECT aux_id_cliente;
 END;
 $$ LANGUAGE plpgsql;
-
 
 --DROP FUNCTION Confirmar_Sesion_Cliente(in_agente VARCHAR(200), in_usuario VARCHAR(200), in_password VARCHAR(200), in_id_token VARCHAR(30), in_ip VARCHAR(100), in_monto NUMERIC, in_moneda VARCHAR(30));
 CREATE OR REPLACE FUNCTION Confirmar_Sesion_Cliente(in_agente VARCHAR(200), in_usuario VARCHAR(200), in_password VARCHAR(200), in_id_token VARCHAR(30), in_ip VARCHAR(100), in_monto NUMERIC, in_moneda VARCHAR(30))
@@ -1632,7 +1648,7 @@ FROM cliente c LEFT JOIN operacion o
 			ON (c.id_cliente = o.id_cliente
 			   AND o.marca_baja = false
 			   AND o.id_accion IN (2, 6)
-			   AND o.id_estado = 2)
+			   AND o.id_estado IN (1, 2))
 		LEFT JOIN operacion_retiro oc
 			ON (o.id_operacion = oc.id_operacion)
 WHERE c.marca_baja = false
@@ -1971,6 +1987,30 @@ FROM v_Tokens tk JOIN v_Tokens_Operacion tko
 WHERE tk.de_agente = false;
 --select * from v_Tokens_Completo_Clientes
 
+--DROP VIEW v_IP_Lista_Blanca
+CREATE OR REPLACE VIEW v_IP_Lista_Blanca AS
+SELECT	DISTINCT ip_ok.ip
+FROM	(
+	SELECT	cs.ip
+	FROM	cliente_sesion cs JOIN cliente cl
+				ON (cs.id_cliente = cl.id_cliente
+				   AND cl.marca_baja = false
+				   AND cl.bloqueado = false)
+	UNION
+	SELECT	us.ip
+	FROM	usuario_sesion us JOIN usuario u
+				ON (us.id_usuario = u.id_usuario
+				   AND u.marca_baja = false)) ip_ok
+WHERE ip_ok.ip NOT IN (SELECT	cs.ip
+						FROM	cliente_sesion cs JOIN cliente cl
+									ON (cs.id_cliente = cl.id_cliente
+									   AND cl.marca_baja = false
+									   AND cl.bloqueado = true));
+--select * from v_IP_Lista_Blanca;			   
+select * from cliente order by 1 desc
+select * from cliente_sesion order by 1 desc
+
+
 select  id_registro_token,id_token,cliente_usuario,bono_carga_1,ingresos,registros,cargaron,total_cargas,total_importe,total_bono from v_Tokens_Completo_Clientes where id_agente = 1 order by cargaron desc, registros desc, ingresos desc
 
 select * from v_Tokens
@@ -2018,16 +2058,25 @@ from v_Clientes_Operaciones
 where id_oficina = 2
 and id_estado = 2
 and id_accion in (1, 2, 5, 6, 9)
+and fecha_hora_proceso >= '2024-05-16 00:00:00'
 group by oficina,
 		agente_usuario, 
 		plataforma;
- 
+-- 15/5 1424
+-- 14/5 471
+
+SELECT * FROM registro_sesiones_sockets order by 1 desc limit 20
+
 select * from v_Clientes
  
 select * from cliente order by 1 desc limit 100
-select * from cliente_sesion order by 1 desc
+select distinct ip from cliente_sesion
 
-select * from cliente where cliente_usuario = 'dario110'
+select * from cliente where cliente_usuario = 'juan33655'
+select * from cliente where cliente_usuario = 'testerclub3pina'
+
+select * from cliente_sesion where id_cliente = 376 order by 1 desc
+
 update cliente set id_cliente_ext = 5002299118, id_cliente_db = 2 where id_cliente = 4;
 
 SELECT * FROM registro_sesiones_sockets order by 1 desc limit 20
@@ -2044,7 +2093,8 @@ where id_oficina = 2
 
 select * from v_Clientes_Operaciones where codigo_operacion = 3 and cliente_usuario = 'Prueba123'
 
-select * from cliente where cliente_usuario = 'Vascoprueba'
+select * from cliente where cliente_usuario = 'josefernandez26'
+select * from cliente_sesion where id_cliente = 376 order by 1 desc
 
 select lower(cliente_usuario), * from cliente order by 2 desc
 
@@ -2067,7 +2117,6 @@ update operacion set id_estado = 2 where id_operacion = 4;
 update oficina set minimo_espera_retiro = 0;
 select * from estado
 
-select * from cliente_sesion
 select * from agente
 select * from v_Agentes where agente_usuario = 'oficina1';
 select * from cliente

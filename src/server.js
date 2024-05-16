@@ -1636,7 +1636,8 @@ app.post('/rechazar_retiro/:id_operacion/:id_usuario', async (req, res) => {
 
 app.post('/login', async (req, res) => {
     try {    
-        const { username, password, version, ipAddress } = req.body;
+        const { username, password, version, ipAddress_2 } = req.body;
+        const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
         const query = `select * from Obtener_Usuario('${username}', true)`;
         const result = await db.handlerSQL(query);
         if (result.rows.length == 0) {
