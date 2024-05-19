@@ -52,7 +52,11 @@
                         <td><% if (dato.id_estado == 1) { %>
                                 <div class="warning"><%= dato.estado %></div>
                             <% } else if (dato.id_estado == 2) { %>
-                                <div class="success"><%= dato.estado %></div>
+                                <div class="success"><%= dato.estado %>
+                                    <% if (dato.id_notificacion > 0) { %>
+                                        (Noti : <%=dato.id_notificacion %>)
+                                    <% } %>
+                                </div>
                             <% } else if (dato.id_estado == 3) { %>
                                 <div class="danger"><%= dato.estado %></div>
                             <% } else { %>

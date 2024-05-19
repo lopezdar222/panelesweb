@@ -305,6 +305,20 @@ CREATE TABLE IF NOT EXISTS estado
     PRIMARY KEY (id_estado)
 );
 
+DROP TABLE IF EXISTS cuenta_bancaria_mercado_pago;
+CREATE TABLE IF NOT EXISTS cuenta_bancaria_mercado_pago
+(
+    id_cuenta_bancaria_mercado_pago serial NOT NULL,
+	id_cuenta_bancaria integer NOT NULL,
+    access_token varchar(200) NOT NULL DEFAULT '-',
+    public_key varchar(200) NOT NULL DEFAULT '-',
+    client_id varchar(200) NOT NULL DEFAULT '-',
+    client_secret varchar(200) NOT NULL DEFAULT '-',
+    marca_baja boolean NOT NULL DEFAULT false,
+    PRIMARY KEY (id_cuenta_bancaria_mercado_pago)
+);
+CREATE INDEX cuenta_bancaria_mercado_pago_id_cuenta_bancaria ON cuenta_bancaria_mercado_pago (id_cuenta_bancaria);
+
 /*****************************************************************************/
 insert into plataforma (plataforma, url_admin, url_juegos, marca_baja)
 values ('Casino 365 Online', 'https://bo.casinoenvivo.club', 'https://www.casino365online.club', false);
@@ -994,11 +1008,12 @@ FROM 	cuenta_bancaria cb join oficina o
 									and op.marca_baja = false
 									and op.id_accion IN (1,5)  --accion de carga
 									and op.id_estado = 2) --estado aceptado
-				   			left join (select 	id_cuenta_bancaria, 
-											max(fecha_hora_descarga) as fecha_descarga
-										from cuenta_bancaria_descarga
-										where marca_baja = false
-										group by id_cuenta_bancaria) cbd
+				   			join (select 	cb.id_cuenta_bancaria, 
+												coalesce(max(cbd.fecha_hora_descarga), '1900-01-01 00:00:00') as fecha_descarga
+										from cuenta_bancaria cb left join cuenta_bancaria_descarga cbd
+											on (cb.id_cuenta_bancaria = cbd.id_cuenta_bancaria)
+										where cbd.marca_baja = false
+										group by cb.id_cuenta_bancaria) cbd
 								on (oc.id_cuenta_bancaria = cbd.id_cuenta_bancaria
 									and op.fecha_hora_ultima_modificacion >= cbd.fecha_descarga)
 					group by oc.id_cuenta_bancaria) cbc
@@ -1456,6 +1471,356 @@ END;
 $$ LANGUAGE plpgsql;
 --select * from Cargar_Bono_Referido(4, 1, 1000, 1 ,2);
 
+DROP TABLE IF EXISTS notificacion;
+CREATE TABLE IF NOT EXISTS notificacion
+(
+    id_notificacion serial NOT NULL,
+    id_usuario integer NOT NULL,
+    id_cuenta_bancaria integer NOT NULL,
+    titulo varchar(100) NOT NULL,
+    mensaje varchar(200) NOT NULL,
+    fecha_hora timestamp NOT NULL,
+	id_notificacion_origen varchar(200) NOT NULL DEFAULT '-',
+	id_origen integer NOT NULL DEFAULT 1,
+	anulada boolean NOT NULL DEFAULT false,
+	id_usuario_ultima_modificacion integer NOT NULL DEFAULT 1,
+    fecha_hora_ultima_modificacion timestamp NOT NULL,
+    PRIMARY KEY (id_notificacion)
+);
+CREATE INDEX notificacion_id_usuario ON notificacion (id_usuario);
+CREATE INDEX notificacion_id_cuenta_bancaria ON notificacion (id_cuenta_bancaria);
+CREATE INDEX notificacion_fecha_hora ON notificacion (fecha_hora DESC);
+
+
+DROP TABLE IF EXISTS notificacion_carga;
+CREATE TABLE IF NOT EXISTS notificacion_carga
+(
+    id_notificacion_carga serial NOT NULL,
+    id_notificacion integer NOT NULL,
+    id_operacion_carga integer,
+    carga_usuario varchar(100),
+    carga_monto numeric,
+    marca_procesado boolean NOT NULL DEFAULT false,
+    fecha_hora_procesado timestamp NOT NULL,
+    PRIMARY KEY (id_notificacion_carga)
+);
+CREATE INDEX notificacion_carga_id_notificacion ON notificacion_carga (id_notificacion DESC);
+CREATE INDEX notificacion_carga_id_operacion_carga ON notificacion_carga (id_operacion_carga DESC);
+CREATE INDEX notificacion_carga_fecha_hora_procesado ON notificacion_carga (fecha_hora_procesado DESC);
+
+--DROP FUNCTION Registrar_Notificacion(in_id_usuario INTEGER, in_id_cuenta_bancaria INTEGER, in_titulo VARCHAR(100), in_mensaje VARCHAR(200), in_id_notificacion_origen VARCHAR(200), in_id_origen INTEGER)
+CREATE OR REPLACE FUNCTION Registrar_Notificacion(in_id_usuario INTEGER, in_id_cuenta_bancaria INTEGER, in_titulo VARCHAR(100), in_mensaje VARCHAR(200), in_id_notificacion_origen VARCHAR(200), in_id_origen INTEGER)
+RETURNS TABLE (id_notificacion INTEGER) AS $$
+DECLARE aux_id_notificacion INTEGER;
+BEGIN
+    -- Iniciar transacción explícita
+    BEGIN
+        -- Bloquear la tabla notificacion para evitar conflictos
+        LOCK TABLE notificacion IN EXCLUSIVE MODE;
+		
+		IF EXISTS (	SELECT 1
+					FROM notificacion
+					WHERE id_notificacion_origen = in_id_notificacion_origen
+				   		AND id_cuenta_bancaria = in_id_cuenta_bancaria
+						AND titulo = in_titulo
+						AND mensaje = in_mensaje
+						AND id_origen = in_id_origen) THEN
+			-- Si ya existe, establecer aux_id_notificacion a -1
+			aux_id_notificacion := -1;
+
+		ELSE
+			-- Si no existe, insertar nueva notificación y obtener el ID insertado
+			INSERT INTO notificacion (id_usuario, id_cuenta_bancaria, titulo, mensaje, fecha_hora, id_notificacion_origen, id_origen, anulada, id_usuario_ultima_modificacion, fecha_hora_ultima_modificacion)
+			VALUES (in_id_usuario, in_id_cuenta_bancaria, in_titulo, in_mensaje, now(), in_id_notificacion_origen, in_id_origen, false, in_id_usuario, now())
+			RETURNING notificacion.id_notificacion into aux_id_notificacion;
+
+		END IF;
+    END;
+	
+	RETURN QUERY SELECT aux_id_notificacion;
+END;
+$$ LANGUAGE plpgsql;
+--SELECT * FROM notificacion order by 1 desc;
+
+CREATE OR REPLACE FUNCTION Registrar_Notificacion_Carga(in_id_notificacion INTEGER, in_carga_usuario VARCHAR(100), in_carga_monto NUMERIC)
+RETURNS TABLE (id_notificacion_carga INTEGER) AS $$
+DECLARE aux_id_notificacion_carga INTEGER;
+BEGIN
+	insert into notificacion_carga (id_notificacion, carga_usuario, carga_monto, marca_procesado, fecha_hora_procesado)
+	values (in_id_notificacion, in_carga_usuario, in_carga_monto, false, now())
+	RETURNING notificacion_carga.id_notificacion_carga into aux_id_notificacion_carga;
+	
+	RETURN QUERY SELECT aux_id_notificacion_carga;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION Registrar_Anulacion_Carga(in_id_notificacion INTEGER, in_id_usuario INTEGER)
+RETURNS VOID AS $$
+BEGIN
+	UPDATE notificacion
+	SET		anulada = true,
+			id_usuario_ultima_modificacion = in_id_usuario,
+			fecha_hora_ultima_modificacion = now()
+	WHERE id_notificacion = in_id_notificacion;
+
+	UPDATE notificacion_carga
+	SET		marca_procesado = true,
+			fecha_hora_procesado = now()
+	WHERE id_notificacion = in_id_notificacion;
+	
+END;
+$$ LANGUAGE plpgsql;
+--select Registrar_Anulacion_Carga(1968, 1)
+--select Registrar_Anulacion_Carga(1969, 1)
+--select * from v_Notificaciones_Cargas where anulada = true order by 1 desc
+
+CREATE OR REPLACE FUNCTION CalcularPorcentajePalabrasEncontradas(A TEXT, B TEXT) RETURNS NUMERIC AS $$
+DECLARE
+    palabras_encontradas INT := 0;
+    total_palabras_b INT := 0;
+    palabra_b TEXT;
+BEGIN
+    -- Dividir la cadena B en palabras y contar el total de palabras
+    total_palabras_b := array_length(string_to_array(B, ' '), 1);
+
+    -- Recorrer cada palabra de A y contar las palabras encontradas en B
+    FOREACH palabra_b IN ARRAY string_to_array(B, ' ') LOOP
+        IF palabra_b = ANY(string_to_array(A, ' ')) THEN
+            palabras_encontradas := palabras_encontradas + 1;
+        END IF;
+    END LOOP;
+
+    -- Calcular el porcentaje de palabras encontradas
+    IF total_palabras_b > 0 THEN
+        RETURN palabras_encontradas::NUMERIC / total_palabras_b::NUMERIC;
+    ELSE
+        RETURN 0;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+-- SELECT CalcularPorcentajePalabrasEncontradas('Guillermo Pinarello ola all', 'Guillermo Jorge Hugo Pinarello') AS porcentaje;
+-- SELECT CalcularPorcentajePalabrasEncontradas('dario lopez', 'dario miguel lopez') AS porcentaje;
+
+-- DROP FUNCTION Verificar_Notificacion_Carga(in_id_notificacion_carga INTEGER)
+CREATE OR REPLACE FUNCTION Verificar_Notificacion_Carga(in_id_notificacion_carga INTEGER)
+RETURNS TABLE (	id_operacion_carga INTEGER,
+			   	id_operacion INTEGER,
+			   	cantidad_cargas INTEGER,
+				monto numeric, 
+				bono numeric, 
+				id_cliente INTEGER, 
+				usuario VARCHAR(200), 
+				id_cliente_ext BIGINT, 
+				id_cliente_db INTEGER,
+				agente_usuario VARCHAR(200),
+				agente_password VARCHAR(200),
+			  	id_plataforma INTEGER,
+				referente_id_cliente INTEGER, 
+				referente_usuario VARCHAR(200), 
+				referente_id_cliente_ext BIGINT, 
+				referente_id_cliente_db INTEGER) AS $$
+DECLARE aux_id_operacion_carga INTEGER;
+DECLARE aux_id_cliente INTEGER;
+DECLARE aux_porcentaje_origen1 DECIMAL(10, 2);
+DECLARE aux_cantidad_cargas INTEGER;
+BEGIN
+	aux_porcentaje_origen1 := 0.5;
+	
+	SELECT	opc.id_operacion_carga, op.id_cliente
+	INTO 	aux_id_operacion_carga, aux_id_cliente
+	FROM 	operacion_carga opc JOIN notificacion_carga nc
+			ON (nc.marca_procesado = false
+				AND CalcularPorcentajePalabrasEncontradas(lower(opc.titular), lower(nc.carga_usuario)) >= aux_porcentaje_origen1
+				AND opc.importe = nc.carga_monto
+			   	AND nc.id_operacion_carga IS NULL
+			   	AND nc.id_notificacion_carga = in_id_notificacion_carga)
+		JOIN notificacion n
+			ON (n.id_notificacion = nc.id_notificacion
+				AND n.id_cuenta_bancaria = 1
+			   AND n.id_origen = 1)
+		JOIN operacion op
+			ON (op.id_operacion = opc.id_operacion
+			   AND op.id_estado = 1
+			   AND op.marca_baja = false
+			   AND op.id_accion = 1);
+
+	IF (aux_id_operacion_carga IS NULL) THEN
+		aux_id_operacion_carga := -1;
+		aux_id_cliente := -1;
+	END IF;
+	
+	IF (aux_id_operacion_carga > 0) THEN
+		SELECT	COALESCE(COUNT(*), 0)
+		INTO 	aux_cantidad_cargas
+		FROM 	operacion_carga opc JOIN operacion op
+				ON (op.id_estado = 2
+					AND op.id_cliente = aux_id_cliente
+					AND op.id_operacion = opc.id_operacion);
+		
+		RETURN QUERY SELECT	aux_id_operacion_carga,
+				op.id_operacion,
+				aux_cantidad_cargas,
+				opc.importe + opc.bono,
+				opc.bono,
+				cl.id_cliente,
+				cl.cliente_usuario, 
+				cl.id_cliente_ext, 
+				cl.id_cliente_db,
+				ag.agente_usuario,
+				ag.agente_password,
+				ag.id_plataforma,
+				COALESCE(clt.id_cliente, 0),
+				COALESCE(clt.cliente_usuario, ''), 
+				COALESCE(clt.id_cliente_ext, 0)::BIGINT, 
+				COALESCE(clt.id_cliente_db, 0)
+		FROM 	operacion_carga opc JOIN operacion op
+					ON (opc.id_operacion_carga = aux_id_operacion_carga
+						AND op.id_operacion = opc.id_operacion)
+				JOIN cliente cl
+					ON (op.id_cliente = cl.id_cliente)
+				JOIN agente ag
+					ON (cl.id_agente = ag.id_agente)
+				LEFT JOIN registro_token rt
+					ON (rt.id_registro_token = cl.id_registro_token)
+				LEFT JOIN cliente clt
+					ON (rt.id_usuario = clt.id_cliente);
+	ELSE 
+		RETURN QUERY SELECT	aux_id_operacion_carga, 0, 0, 0::numeric, 0::numeric, 0, ''::VARCHAR(200), 0::BIGINT, 0, ''::VARCHAR(200), ''::VARCHAR(200), 0, 0, ''::VARCHAR(200), 0::BIGINT, 0;
+	END IF;
+END;
+$$ LANGUAGE plpgsql;
+-- select * from Verificar_Notificacion_Carga(260);
+-- select * from Verificar_Notificacion_Carga(261);
+-- select * from Verificar_Notificacion_Carga(564);
+
+-- DROP FUNCTION Verificar_Operacion_Carga(in_id_operacion INTEGER)
+CREATE OR REPLACE FUNCTION Verificar_Operacion_Carga(in_id_operacion INTEGER)
+RETURNS TABLE (	id_operacion_carga INTEGER,
+			   	id_operacion INTEGER,
+			   	id_notificacion_carga INTEGER,
+			   	id_usuario INTEGER, 
+			   	id_cuenta_bancaria INTEGER,
+			   	cantidad_cargas INTEGER,
+				monto numeric, 
+				bono numeric, 
+				id_cliente INTEGER, 
+				usuario VARCHAR(200), 
+				id_cliente_ext BIGINT, 
+				id_cliente_db INTEGER,
+				agente_usuario VARCHAR(200),
+				agente_password VARCHAR(200),
+			  	id_plataforma INTEGER,
+				referente_id_cliente INTEGER, 
+				referente_usuario VARCHAR(200), 
+				referente_id_cliente_ext BIGINT, 
+				referente_id_cliente_db INTEGER) AS $$
+DECLARE aux_id_operacion_carga INTEGER;
+DECLARE aux_id_cliente INTEGER;
+DECLARE aux_porcentaje_origen1 DECIMAL(10, 2);
+DECLARE aux_cantidad_cargas INTEGER;
+DECLARE aux_id_notificacion_carga INTEGER;
+DECLARE aux_id_usuario INTEGER;
+DECLARE aux_id_cuenta_bancaria INTEGER;
+BEGIN
+	aux_porcentaje_origen1 := 0.5;
+	
+	SELECT	opc.id_operacion_carga, op.id_cliente, nc.id_notificacion_carga, n.id_usuario, n.id_cuenta_bancaria
+	INTO 	aux_id_operacion_carga, aux_id_cliente, aux_id_notificacion_carga, aux_id_usuario, aux_id_cuenta_bancaria
+	FROM 	operacion_carga opc JOIN notificacion_carga nc
+			ON (nc.marca_procesado = false
+				AND CalcularPorcentajePalabrasEncontradas(lower(opc.titular), lower(nc.carga_usuario)) >= aux_porcentaje_origen1
+				AND opc.importe = nc.carga_monto
+			   	AND nc.id_operacion_carga IS NULL)
+		JOIN notificacion n
+			ON (n.id_notificacion = nc.id_notificacion
+				AND n.id_cuenta_bancaria = 1
+			   	AND n.id_origen = 1)
+		JOIN operacion op
+			ON (op.id_operacion = opc.id_operacion
+				AND op.id_operacion = in_id_operacion);
+
+	IF (aux_id_operacion_carga IS NULL) THEN
+		aux_id_operacion_carga := -1;
+		aux_id_cliente := -1;
+	END IF;
+	
+	IF (aux_id_operacion_carga > 0) THEN
+		SELECT	COALESCE(COUNT(*), 0)
+		INTO 	aux_cantidad_cargas
+		FROM 	operacion_carga opc JOIN operacion op
+				ON (op.id_estado = 2
+					AND op.id_cliente = aux_id_cliente
+					AND op.id_operacion = opc.id_operacion);
+		
+		RETURN QUERY SELECT	aux_id_operacion_carga,
+				op.id_operacion,
+				aux_id_notificacion_carga, 
+				aux_id_usuario, 
+				aux_id_cuenta_bancaria,
+				aux_cantidad_cargas,
+				opc.importe + opc.bono,
+				opc.bono,
+				cl.id_cliente,
+				cl.cliente_usuario, 
+				cl.id_cliente_ext, 
+				cl.id_cliente_db,
+				ag.agente_usuario,
+				ag.agente_password,
+				ag.id_plataforma,
+				COALESCE(clt.id_cliente, 0),
+				COALESCE(clt.cliente_usuario, ''), 
+				COALESCE(clt.id_cliente_ext, 0)::BIGINT, 
+				COALESCE(clt.id_cliente_db, 0)
+		FROM 	operacion_carga opc JOIN operacion op
+					ON (op.id_operacion = in_id_operacion
+						AND op.id_operacion = opc.id_operacion)
+				JOIN cliente cl
+					ON (op.id_cliente = cl.id_cliente)
+				JOIN agente ag
+					ON (cl.id_agente = ag.id_agente)
+				LEFT JOIN registro_token rt
+					ON (rt.id_registro_token = cl.id_registro_token)
+				LEFT JOIN cliente clt
+					ON (rt.id_usuario = clt.id_cliente);
+	ELSE 
+		RETURN QUERY SELECT	aux_id_operacion_carga, 0, 0, 0, 0, 0, 0::numeric, 0::numeric, 0, ''::VARCHAR(200), 0::BIGINT, 0, ''::VARCHAR(200), ''::VARCHAR(200), 0, 0, ''::VARCHAR(200), 0::BIGINT, 0;
+	END IF;
+END;
+$$ LANGUAGE plpgsql;
+--select * from Verificar_Operacion_Carga(11749)
+--select * from Verificar_Operacion_Carga(11802)
+
+/* DROP FUNCTION Confirmar_Notificacion_Carga(in_id_notificacion_carga INTEGER, 
+														in_id_operacion_carga INTEGER, 
+														in_id_operacion INTEGER, 
+														in_id_usuario INTEGER, 
+														in_id_cuenta_bancaria INTEGER)*/
+CREATE OR REPLACE FUNCTION Confirmar_Notificacion_Carga(in_id_notificacion_carga INTEGER, 
+														in_id_operacion_carga INTEGER, 
+														in_id_operacion INTEGER, 
+														in_id_usuario INTEGER, 
+														in_id_cuenta_bancaria INTEGER)
+RETURNS VOID AS $$
+BEGIN
+	UPDATE 	notificacion_carga
+	SET 	id_operacion_carga = in_id_operacion_carga,
+			marca_procesado = true,
+			fecha_hora_procesado = now()
+	WHERE 	notificacion_carga.id_notificacion_carga = in_id_notificacion_carga;
+	
+	UPDATE 	operacion
+	SET		id_estado = 2,
+			notificado = false,
+			fecha_hora_ultima_modificacion = now(),
+			id_usuario_ultima_modificacion = in_id_usuario
+	WHERE 	operacion.id_operacion = in_id_operacion;
+	
+	UPDATE 	operacion_carga
+	SET		id_cuenta_bancaria = in_id_cuenta_bancaria
+	WHERE 	operacion_carga.id_operacion_carga = in_id_operacion_carga;
+END;
+$$ LANGUAGE plpgsql;
+
 --------------Vistas de Monitoreo y Gestión---------------------
 --(excepto v_Cuenta_Bancaria_Activa)
 --DROP VIEW v_Console_Logs;
@@ -1688,7 +2053,11 @@ SELECT 	cl.id_cliente,
 		COALESCE(opc.id_cuenta_bancaria, 0)					AS carga_id_cuenta_bancaria,
 		COALESCE(opc.bono, 0)								AS carga_bono,
 		COALESCE(opc.observaciones, '')						AS carga_observaciones,
-		COALESCE(opcb.nombre || '-' || opcb.alias || '-' || opcb.cbu, '')	AS carga_cuenta_bancaria
+		COALESCE(opcb.nombre || '-' || opcb.alias || '-' || opcb.cbu, '')	AS carga_cuenta_bancaria,
+		COALESCE(opcb.nombre, '')	AS carga_cuenta_bancaria_nombre,
+		COALESCE(opcb.alias, '')	AS carga_cuenta_bancaria_alias,
+		COALESCE(opcb.cbu, '')	AS carga_cuenta_bancaria_cbu,
+		COALESCE(nc.id_notificacion, 0)	AS id_notificacion
 FROM cliente cl JOIN operacion o
 			ON (cl.id_cliente = o.id_cliente
 			   	AND o.marca_baja = false)
@@ -1719,8 +2088,11 @@ FROM cliente cl JOIN operacion o
 			ON (o.id_operacion = opc.id_operacion)
 		LEFT JOIN cuenta_bancaria opcb
 			ON (opc.id_cuenta_bancaria = opcb.id_cuenta_bancaria)
+		LEFT JOIN notificacion_carga nc
+			ON (nc.id_operacion_carga = opc.id_operacion_carga)
 WHERE cl.marca_baja = false;
 --select * from v_Clientes_Operaciones where id_cliente = 18 order by id_operacion desc
+--221msec
 
 --DROP VIEW v_Clientes
 CREATE OR REPLACE VIEW v_Clientes AS
@@ -2007,11 +2379,109 @@ WHERE ip_ok.ip NOT IN (SELECT	cs.ip
 									   AND cl.marca_baja = false
 									   AND cl.bloqueado = true));
 --select * from v_IP_Lista_Blanca;			   
+
+--DROP VIEW v_Cuenta_Bancaria_Mercado_Pago;
+CREATE OR REPLACE VIEW v_Cuenta_Bancaria_Mercado_Pago AS
+SELECT 	cb.id_cuenta_bancaria,
+		cb.id_oficina,
+		cb.nombre,
+		cb.alias,
+		cb.cbu,
+		/*cba.nombre_aplicacion,
+		cba.notificacion_descripcion,*/
+		cbmp.access_token,
+		cbmp.public_key,
+		cbmp.client_id,
+		cbmp.client_secret,
+		us.id_usuario
+FROM 	cuenta_bancaria cb JOIN cuenta_bancaria_mercado_pago cbmp
+				ON (cb.id_cuenta_bancaria = cbmp.id_cuenta_bancaria
+				   	AND cbmp.marca_baja = false)
+			JOIN (SELECT 	u.id_oficina, 
+				  			MIN(u.id_usuario) AS id_usuario 
+				  	FROM usuario u
+				  	WHERE u.id_rol = 2 
+				  		AND u.marca_baja = false
+				  	GROUP BY u.id_oficina) us
+				ON (us.id_oficina = cb.id_oficina);
+--select * from v_Cuenta_Bancaria_Mercado_Pago order by 1
+
+--DROP VIEW v_Notificaciones_Cargas;
+CREATE OR REPLACE VIEW v_Notificaciones_Cargas AS
+SELECT	n.id_notificacion,
+		n.id_usuario,
+		u.id_oficina,
+		o.oficina,
+		n.id_cuenta_bancaria,
+		cb.nombre,
+		cb.alias,
+		cb.cbu,
+		n.titulo,
+		n.mensaje,
+		n.fecha_hora,
+		n.id_notificacion_origen,
+		n.id_origen,
+		n.anulada,
+		nc.id_notificacion_carga,
+		nc.id_operacion_carga,
+		nc.carga_usuario,
+		nc.carga_monto,
+		nc.marca_procesado,
+		nc.fecha_hora_procesado,
+		COALESCE(opc.importe, 0)	AS importe,
+		COALESCE(opc.bono, 0)		AS bono,
+		COALESCE(op.id_cliente,0 )	AS id_cliente,
+		COALESCE(op.fecha_hora_creacion, '1900-01-01 00:00:00')	AS fecha_hora_creacion,
+		COALESCE(cl.cliente_usuario, '' )	AS cliente_usuario,
+		COALESCE(ag.agente_usuario, '' )	AS agente_usuario,
+		COALESCE(pl.plataforma, '' )		AS plataforma,
+		COALESCE(pl.url_admin, '' )			AS url_admin
+FROM	notificacion n JOIN notificacion_carga nc
+				ON (n.id_notificacion = nc.id_notificacion)
+			JOIN usuario u
+				ON (u.id_usuario = n.id_usuario)
+			JOIN oficina o
+				ON (u.id_oficina = o.id_oficina)
+			JOIN cuenta_bancaria cb
+				ON (n.id_cuenta_bancaria = cb.id_cuenta_bancaria)
+			LEFT JOIN operacion_carga opc
+				ON (nc.id_operacion_carga = opc.id_operacion_carga
+				   AND cb.id_cuenta_bancaria = opc.id_cuenta_bancaria) -- revisar!!
+			LEFT JOIN operacion op
+				ON (op.id_operacion = opc.id_operacion
+				   AND op.id_accion = 1
+				   AND op.id_estado = 2
+				   AND op.marca_baja = false)
+			LEFT JOIN cliente cl
+				ON (op.id_cliente = cl.id_cliente)
+			LEFT JOIN agente ag
+				ON (cl.id_agente = ag.id_agente)
+			LEFT JOIN plataforma pl
+				ON (pl.id_plataforma = ag.id_plataforma); 
+--select * from v_Notificaciones_Cargas order by fecha_hora_procesado desc;
+
+select *
+from v_Clientes_Operaciones 
+where marca_baja = false
+
+
+
+select * from notificacion_carga where id_notificacion_carga = 572
+select * from operacion_carga where id_operacion_carga = 7990
+
+select * from cuenta_bancaria order by 1
+select * from cuenta_bancaria_mercado_pago order by id_cuenta_bancaria
+select * from cuenta_bancaria_aplicacion
+select * from usuario
+
+select * from operacion order by 1 desc
+select * from operacion_carga order by 1 desc
+select * from notificacion order by 1 desc
+select * from notificacion_carga order by 1 desc
+select * from v_Console_Logs
+
 select * from cliente order by 1 desc
 select * from cliente_sesion order by 1 desc
-
-
-select  id_registro_token,id_token,cliente_usuario,bono_carga_1,ingresos,registros,cargaron,total_cargas,total_importe,total_bono from v_Tokens_Completo_Clientes where id_agente = 1 order by cargaron desc, registros desc, ingresos desc
 
 select * from v_Tokens
 
@@ -2034,13 +2504,7 @@ from cliente
 where id_cliente not in (select id_usuario 
 						 from registro_token 
 						 where activo = true and de_agente = false);
-delete from cliente where id_cliente in (34,35,36,37,38)
-delete from operacion where id_cliente in (34,35,36,37,38)
-delete from registro_token where id_usuario in (34,35,36,37,38) and de_agente = false
-select * from cliente order by 1 desc
-select * from operacion order by 1 desc
-select * from registro_token order by 1 desc
-
+						 
 SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
 INTO aux_token;
 
@@ -2058,65 +2522,18 @@ from v_Clientes_Operaciones
 where id_oficina = 2
 and id_estado = 2
 and id_accion in (1, 2, 5, 6, 9)
-and fecha_hora_proceso >= '2024-05-16 00:00:00'
+and fecha_hora_proceso >= '2024-05-19 00:00:00'
 group by oficina,
 		agente_usuario, 
 		plataforma;
+
+-- 19/5 
+-- 18/5 1670
+-- 17/5 1709
+-- 16/5 1645
 -- 15/5 1424
 -- 14/5 471
 
 SELECT * FROM registro_sesiones_sockets order by 1 desc limit 20
 
-select * from v_Clientes
- 
-select * from cliente order by 1 desc limit 100
-select distinct ip from cliente_sesion
-
-select * from cliente where cliente_usuario = 'juan33655'
-select * from cliente where cliente_usuario = 'testerclub3pina'
-
-select * from cliente_sesion where id_cliente = 376 order by 1 desc
-
-update cliente set id_cliente_ext = 5002299118, id_cliente_db = 2 where id_cliente = 4;
-
-SELECT * FROM registro_sesiones_sockets order by 1 desc limit 20
-
-select * from operacion_carga order by 1 desc
-
-
-select * from plataforma
-
 select * from v_Console_Logs
-
-select * from v_Cuenta_Bancaria_Activa
-where id_oficina = 2
-
-select * from v_Clientes_Operaciones where codigo_operacion = 3 and cliente_usuario = 'Prueba123'
-
-select * from cliente where cliente_usuario = 'josefernandez26'
-select * from cliente_sesion where id_cliente = 376 order by 1 desc
-
-select lower(cliente_usuario), * from cliente order by 2 desc
-
-update cliente set cliente_usuario = lower(cliente_usuario)
-
-select * from registro_token where id_registro_token = 20
-select * from cliente where id_cliente = 12
-select * from agente
-select * from plataforma
-select * from oficina
-select *
-from v_Clientes_Operaciones where id_cliente = 1 and id_accion in (1,5) and id_estado = 2
-order by fecha_hora_operacion desc
-select * from cuenta_bancaria
-select * from operacion order by 1 desc
-select * from operacion_retiro order by 1 desc
-select * from operacion_carga order by 1 desc
-select * from accion
-update operacion set id_estado = 2 where id_operacion = 4;
-update oficina set minimo_espera_retiro = 0;
-select * from estado
-
-select * from agente
-select * from v_Agentes where agente_usuario = 'oficina1';
-select * from cliente

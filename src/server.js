@@ -19,6 +19,7 @@ app.listen(PORT, () => {
 });
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
+//app.use(bodyParser.json());
 app.use(express.json()); // Para analizar JSON
 app.use(express.urlencoded({ extended: true })); // Para analizar datos de formularios URL-encoded
 const ejecucion_servidor = false;
@@ -27,7 +28,7 @@ const ejecucion_servidor_numero = 1;
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../public/views'));
 //Whatsapp/////////////////////////////////////////////////////////////////////
-const dias_historial = 20;
+const dias_historial = 15;
 // Configuración de sesiones
 app.use(session({
     secret: 'tu-secreto-seguro',
@@ -80,6 +81,10 @@ app.get('/monitoreo_landingweb_ayuda', async (req, res) => {
     res.render('monitoreo_landingweb_ayuda', { title: 'Monitoreo de Solicitudes' });
 });
 
+app.get('/monitoreo_notificaciones_ayuda', async (req, res) => {
+    res.render('monitoreo_notificaciones_ayuda', { title: 'Monitoreo de Transferencias' });
+});
+
 app.get('/reportes', async (req, res) => {
     // Obtener los parámetros de la URL
     const id_usuario = parseInt(req.query.id_usuario, 10);
@@ -130,7 +135,7 @@ app.get('/usuarios_clientes', async (req, res) => {
         if (result.rows[0].id_rol > 1) {
             query2 = query2 + ` where id_oficina = ${id_oficina}`;
         }
-        query2 = query2 + ` order by ult_operacion desc`;
+        query2 = query2 + ` order by visto_operador, ult_operacion desc`;
         const result2 = await db.handlerSQL(query2);
         if (result2.rows.length == 0) {
             res.render('usuarios_clientes', { message: 'No hay Clientes', title: 'Clientes'});
@@ -1023,6 +1028,66 @@ app.get('/cuentas_cobro_editar', async (req, res) => {
     }
 });
 
+app.get('/monitoreo_notificaciones_anular', async (req, res) => {
+    const id_notificacion = parseInt(req.query.id_notificacion, 10);
+    res.render('monitoreo_notificaciones_anular', { title: 'Anulación de Notificacion de Cobro', id_notificacion : id_notificacion });
+});
+
+app.get('/monitoreo_notificaciones', async (req, res) => {
+    const id_usuario = parseInt(req.query.id_usuario, 10);
+    const id_token = req.query.id_token;
+    const id_rol = parseInt(req.query.id_rol, 10);
+    try {
+        const query = `select * from Obtener_Usuario_Token(${id_usuario},'${id_token}')`;
+        const result = await db.handlerSQL(query);
+        if (result.rows.length == 0) {
+            res.render('monitoreo_notificaciones', { message: 'error de sesión', title: 'Monitoreo de Transferencias'});
+            return;
+        }
+        const id_oficina = result.rows[0].id_oficina;
+        let query2 = `select    id_notificacion,` +
+                                `id_oficina,` +
+                                `oficina,` +
+                                `id_cuenta_bancaria,` +
+                                `nombre,` +
+                                `TO_CHAR(fecha_hora, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora,` +
+                                `TO_CHAR(carga_monto, '999,999,999,999') as carga_monto,` +
+                                `carga_usuario,` +
+                                `id_origen,` +
+                                `anulada,` +
+                                `id_notificacion_carga,` +
+                                `id_operacion_carga,` +
+                                `marca_procesado,` +
+                                `TO_CHAR(fecha_hora_procesado, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_procesado,` +
+                                `TO_CHAR(importe, '999,999,999,999') as importe,` +
+                                `TO_CHAR(bono, '999,999,999,999') as bono,` +
+                                `id_cliente,` +
+                                `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_solicitud,` +
+                                `cliente_usuario,` +
+                                `agente_usuario,` +
+                                `plataforma,` +
+                                `REPLACE(REPLACE(url_admin, 'https://', ''), '.com', '') as url_admin ` +
+                        `from v_Notificaciones_Cargas ` +
+                        `where (fecha_hora > CURRENT_DATE - INTERVAL '${dias_historial} days' or marca_procesado = false) `;
+        if (id_rol > 1) {
+            query2 = query2 + ` and id_oficina = ${id_oficina}`;
+        }
+        query2 = query2 + ` order by fecha_hora_procesado desc`;
+        
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('monitoreo_notificaciones', { message: 'No hay Actividad', title: 'Monitoreo de Transferencias', id_oficina : id_oficina});
+            return;
+        }
+        const datos = result2.rows;
+
+        res.render('monitoreo_notificaciones', { message: 'ok', title: 'Monitoreo de Transferencias', id_oficina : id_oficina, datos : datos });
+    }
+    catch (error) {
+        res.render('monitoreo_notificaciones', { message: 'error', title: 'Monitoreo de Transferencias'});
+    }
+});
+
 app.get('/monitoreo_landingweb_retiro', async (req, res) => {
     // Obtener los parámetros de la URL
     const id_operacion = parseInt(req.query.id_operacion, 10);
@@ -1177,12 +1242,14 @@ app.get('/monitoreo_landingweb', async (req, res) => {
                                 `carga_importe,` +
                                 `carga_bono, ` +
                                 `carga_titular, ` +
-                                `carga_observaciones ` +
-                        `from v_Clientes_Operaciones where marca_baja = false`;
+                                `carga_observaciones, ` +
+                                `id_notificacion  ` +
+                        `from v_Clientes_Operaciones where marca_baja = false ` +
+                        `and (fecha_hora_operacion > CURRENT_DATE - INTERVAL '${dias_historial} days' or id_estado = 1) `;
         if (id_rol > 1) {
-            query2 = query2 + ` and id_oficina = ${id_oficina}`;
+            query2 = query2 + `and id_oficina = ${id_oficina} `;
         }
-        query2 = query2 + ` order by id_operacion desc`;
+        query2 = query2 + `order by id_operacion desc;`;
         //console.log('Paso 2');
         //console.log(query2);
         const result2 = await db.handlerSQL(query2);
@@ -1249,6 +1316,19 @@ app.get('/monitoreo_landingweb_detalle', async (req, res) => {
 });
 
 // Páginas Generales
+app.post('/anula_notificacion/:id_notificacion/:id_usuario', async (req, res) => {
+    try {    
+            const { id_notificacion, id_usuario } = req.params;
+            const query = `select Registrar_Anulacion_Carga(${id_notificacion}, ${id_usuario})`;
+            await db.handlerSQL(query);
+            res.status(201).json({ message: 'Notificación Anulada' });
+        }
+    catch (error) {
+        //console.log('baja cliente nook');
+        res.status(500).json({ message: 'Error al Anular Notificacion' });
+    }
+});
+
 app.post('/alerta_usuarios_clientes/:id_cliente/:id_usuario', async (req, res) => {
     try {
         let { id_cliente, id_usuario } = req.params;
@@ -1555,7 +1635,7 @@ app.post('/cargar_cobro/:id_operacion/:id_usuario/:monto/:bono/:id_cuenta_bancar
             const carga_manual3 = require('./scrap_bot3/cargar.js');
             resultado = await carga_manual3(id_cliente_ext, id_cliente_db, cliente_usuario.trim(), String(monto_total), agente_nombre, agente_password);
         }
-        console.log(`Resultado carga = ${resultado}`);
+        //console.log(`Resultado carga = ${resultado}`);
         if (resultado == 'ok') 
         {
             const query2 = `select * from Modificar_Cliente_Carga(${id_operacion}, 2, ${monto_carga}, ${monto_bono}, ${id_cuenta_bancaria}, ${id_usuario})`;
@@ -1908,3 +1988,301 @@ app.get('/descargar/:nombreArchivo', (req, res) => {
   const rutaArchivo = path.join(directorioArchivos, nombreArchivo);
   res.download(rutaArchivo);
 });
+
+var router = express.Router();  
+
+app.use('/api', router);
+
+// Ruta para recibir notificaciones IPN/webhook
+router.post('/webhook', async (req, res) => {
+    res.sendStatus(200);  // Responder a Mercado Pago que recibiste la notificación
+    console.log('Webhook recibido:', req.body);
+
+    const mercadopago = require('mercadopago');
+    //mercadopago.configurations.setAccessToken('APP_USR-5827283266183224-051716-3c0bd335a059446611c107428e849f37-203158624');
+    // Configurar el token de acceso
+    mercadopago.configurations = {
+        access_token: 'APP_USR-5827283266183224-051716-3c0bd335a059446611c107428e849f37-203158624'
+    };
+    // Procesar la notificación
+    const payment = req.body;
+
+    // Aquí puedes manejar la notificación según el tipo de evento
+    if (payment.type === 'payment') {
+        // Lógica para manejar pagos
+        console.log('Pago recibido:', payment.data);
+        const pago = await mercadopago.Payment.findById(payment.data.id);
+        console.log('Detalles del pago:', pago);
+    }
+});
+
+router.post('/mp_api_desa', async (req, res) => {
+    try 
+    {
+        res.status(200).json({ message: 'Correcta Recepción de Notificacion MP.' });
+    } catch (error) {
+        await db.insertLogMessage(`Error al recibir notificacion MP. ${error}`);
+        res.status(400).json({ message: 'Error al recibir notificacion MP.' });
+    }
+});
+
+router.post('/mp_api', async (req, res) => {
+    try 
+    {
+        res.status(200).json({ message: 'Correcta Recepción de Notificacion MP.' });
+        //console.log('Headers:', req.headers);
+        //console.log('Content-Type:', req.get('Content-Type'));
+        //db.insertLogMessage(`Notificacion - ${ejecucion_servidor_numero} - ${id_notificacion}`);
+        const id_cuenta_bancaria = parseInt(req.query.id_cuenta, 10);
+        //console.log(`Notificacion de - ${id_cuenta_bancaria}`);
+        const jsonString = JSON.stringify(req.body);
+        let id_notificacion = 0;
+        let id_notificacion_carga = 0;                        
+        let query1 = '';
+        let result1 = '';                     
+        let query2 = '';
+        let result2 = '';
+        if (!req.body.resource) {
+            db.insertLogMessage(`Error en recepción de Recurso!!`);
+        } else {
+            const url = req.body.resource;
+            const idPago = url.split('/collections/notifications/')[1];
+            let accessToken = '';
+            let id_oficina = 0;
+            let headers = {};
+            let respuesta = {};
+    
+            let operacion_monto = '';
+            let operacion_usuario = '';
+            let titulo = '';
+            let notificacion = '';
+            let idnotificacionorigen = '';
+            let jsonStringCollection = '';
+    
+            const query = `select * from v_Cuenta_Bancaria_Mercado_Pago where id_cuenta_bancaria = ${id_cuenta_bancaria};`;
+            const result = await db.handlerSQL(query);
+            if (result.rows) {
+                accessToken = result.rows[0].access_token;
+            } 
+    
+            if (accessToken != '')
+            {
+                headers = {
+                    Authorization: `Bearer ${accessToken}`,
+                };
+                respuesta = await axios.get(url, { headers });
+
+                if (respuesta.status == 200) 
+                {
+                    if (respuesta.data.collection.payment_type == 'account_money' && 
+                        respuesta.data.collection.payment_method_id == 'account_money' && 
+                        respuesta.data.collection.operation_type == 'money_transfer') 
+                    {
+                        operacion_monto = String(respuesta.data.collection.total_paid_amount);
+                        operacion_usuario = respuesta.data.collection.payer.email + ' ' + respuesta.data.collection.payer.nickname;
+                        operacion_usuario = operacion_usuario.toLowerCase();
+                        titulo = 'IsUsserId : ' + respuesta.data.collection.issuer_id;
+                        notificacion = 'PayerId : ' + respuesta.data.collection.payer.id;
+                        idnotificacionorigen = idPago;
+                        id_oficina = result.rows[0].id_oficina;
+                        id_usuario = result.rows[0].id_usuario;
+    
+                        query1 = `select * from Registrar_Notificacion(${id_usuario}, ${id_cuenta_bancaria}, '${titulo}','${notificacion}','${idnotificacionorigen}', 1)`;
+                        result1 = await db.handlerSQL(query1);
+                        if (result1.rows.length > 0) 
+                        {
+                            id_notificacion = result1.rows[0].id_notificacion;
+                            if (id_notificacion > 0) {
+                                query2 = `select * from Registrar_Notificacion_Carga(${id_notificacion},'${operacion_usuario}',${operacion_monto})`;
+                                result2 = await db.handlerSQL(query2);
+                                id_notificacion_carga = result2.rows[0].id_notificacion_carga;
+                            }
+                        }
+                    } else if (respuesta.data.collection.payment_type == 'account_money' && 
+                                respuesta.data.collection.payment_method_id == 'debin_transfer' && 
+                                respuesta.data.collection.operation_type == 'money_transfer') 
+                    {                        
+                        operacion_monto = String(respuesta.data.collection.total_paid_amount);
+                        operacion_usuario = respuesta.data.collection.payer.email + ' ' + respuesta.data.collection.payer.nickname;
+                        operacion_usuario = operacion_usuario.toLowerCase();
+                        titulo = 'IsUsserId : ' + respuesta.data.collection.issuer_id;
+                        titulo = titulo + ' - Origen : Cuenta Asociada';
+                        notificacion = 'PayerId : ' + respuesta.data.collection.payer.id;
+                        idnotificacionorigen = idPago;
+                        id_oficina = result.rows[0].id_oficina;
+                        id_usuario = result.rows[0].id_usuario;
+    
+                        query1 = `select * from Registrar_Notificacion(${id_usuario}, ${id_cuenta_bancaria}, '${titulo}','${notificacion}','${idnotificacionorigen}', 1)`;
+                        result1 = await db.handlerSQL(query1);
+                        if (result1.rows.length > 0) 
+                        {
+                            id_notificacion = result1.rows[0].id_notificacion;
+                            query2 = `select * from Registrar_Notificacion_Carga(${id_notificacion},'${operacion_usuario}',${operacion_monto})`;
+                            result2 = await db.handlerSQL(query2);
+                            id_notificacion_carga = result2.rows[0].id_notificacion_carga;
+                        }
+                    }
+                    else if (respuesta.data.collection.payment_type == 'credit_card' && 
+                        respuesta.data.collection.operation_type == 'money_transfer') 
+                    {
+                        if (respuesta.data.collection.status == 'approved')
+                        {
+                            operacion_monto = String(respuesta.data.collection.transaction_amount);
+                            operacion_usuario = respuesta.data.collection.payer.email + ' ' + respuesta.data.collection.payer.nickname;
+                            operacion_usuario = operacion_usuario.toLowerCase();
+                            titulo = 'IsUsserId : ' + respuesta.data.collection.issuer_id;
+                            titulo = titulo + ' - Origen : ' + respuesta.data.collection.payment_method_id;
+                            notificacion = 'PayerId : ' + respuesta.data.collection.payer.id;
+                            idnotificacionorigen = idPago;
+                            id_oficina = result.rows[0].id_oficina;
+                            id_usuario = result.rows[0].id_usuario;
+
+                            query1 = `select * from Registrar_Notificacion(${id_usuario}, ${id_cuenta_bancaria}, '${titulo}','${notificacion}','${idnotificacionorigen}', 1)`;
+                            result2 = await db.handlerSQL(query1);
+                            if (result2.rows.length > 0) 
+                            {
+                                id_notificacion = result2.rows[0].id_notificacion;
+                                query2 = `select * from Registrar_Notificacion_Carga(${id_notificacion},'${operacion_usuario}',${operacion_monto})`;
+                                result2 = await db.handlerSQL(query2);
+                                id_notificacion_carga = result2.rows[0].id_notificacion_carga;
+                            }
+                        } else {
+                            jsonStringCollection = JSON.stringify(respuesta.data.collection);
+                            //db.insertLogMessage(`Cuenta ${id_cuenta_bancaria} Pago TC Rechazado: ${jsonStringCollection}`); 
+                            db.insertLogMessage(`Cuenta ${id_cuenta_bancaria} Pago TC Rechazado: ${url}`); 
+                        }
+                    } else if (respuesta.data.collection.payment_type == 'digital_currency' && 
+                        respuesta.data.collection.payment_method_id == 'consumer_credits' && 
+                        respuesta.data.collection.operation_type == 'money_transfer') 
+                    {
+                        operacion_monto = String(respuesta.data.collection.total_paid_amount);
+                        operacion_usuario = respuesta.data.collection.payer.email + ' ' + respuesta.data.collection.payer.nickname;
+                        operacion_usuario = operacion_usuario.toLowerCase();
+                        titulo = 'IsUsserId : ' + respuesta.data.collection.issuer_id;
+                        titulo = titulo + '- Origen : En Cuotas MP';
+                        notificacion = 'PayerId : ' + respuesta.data.collection.payer.id;
+                        idnotificacionorigen = idPago;
+                        id_oficina = result.rows[0].id_oficina;
+                        id_usuario = result.rows[0].id_usuario;
+
+                        query1 = `select * from Registrar_Notificacion(${id_usuario}, ${id_cuenta_bancaria}, '${titulo}','${notificacion}','${idnotificacionorigen}', 1)`;
+                        result1 = await db.handlerSQL(query1);
+                        if (result1.rows.length > 0) 
+                        {
+                            id_notificacion = result1.rows[0].id_notificacion;
+                            query2 = `select * from Registrar_Notificacion_Carga(${id_notificacion},'${operacion_usuario}',${operacion_monto})`;
+                            result2 = await db.handlerSQL(query2);
+                            id_notificacion_carga = result2.rows[0].id_notificacion_carga;
+                        }
+                    } else if (respuesta.data.collection.payment_type == 'bank_transfer' && 
+                        respuesta.data.collection.payment_method_id == 'debin_transfer' && 
+                        respuesta.data.collection.operation_type == 'money_transfer') 
+                    {
+                        operacion_monto = String(respuesta.data.collection.total_paid_amount);
+                        operacion_usuario = respuesta.data.collection.payer.email + ' ' + respuesta.data.collection.payer.nickname;
+                        operacion_usuario = operacion_usuario.toLowerCase();
+                        titulo = 'IsUsserId : ' + respuesta.data.collection.issuer_id;
+                        titulo = titulo + '- Origen : Cuenta Vinculada';
+                        notificacion = 'PayerId : ' + respuesta.data.collection.payer.id;
+                        idnotificacionorigen = idPago;
+                        id_oficina = result.rows[0].id_oficina;
+                        id_usuario = result.rows[0].id_usuario;
+
+                        query1 = `select * from Registrar_Notificacion(${id_usuario}, ${id_cuenta_bancaria}, '${titulo}','${notificacion}','${idnotificacionorigen}', 1)`;
+                        result1= await db.handlerSQL(query1);
+                        if (result1.rows.length > 0) 
+                        {
+                            id_notificacion = result1.rows[0].id_notificacion;
+                            query2 = `select * from Registrar_Notificacion_Carga(${id_notificacion},'${operacion_usuario}',${operacion_monto})`;
+                            result2 = await db.handlerSQL(query2);
+                            id_notificacion_carga = result2.rows[0].id_notificacion_carga;
+                        }
+                    } else {
+                        jsonStringCollection = JSON.stringify(respuesta.data.collection);
+                        //db.insertLogMessage(`Cuenta ${id_cuenta_bancaria} Colección Inesperada : ${jsonStringCollection}`);
+                        db.insertLogMessage(`Cuenta ${id_cuenta_bancaria} Colección Inesperada : ${url}`);
+                    }
+                    if (id_notificacion_carga > 0) {
+                        await verificarNotificacionCarga(id_notificacion_carga, id_usuario, id_cuenta_bancaria);
+                    }
+                } else {
+                    db.insertLogMessage(`Error en Respuesta: ${respuesta.status}`);
+                }
+            } else {
+                await db.insertLogMessage(`Acces Token no encontrado para cuenta: ${id_cuenta_bancaria}`);
+                await db.insertLogMessage(`Recibido de MP: ${jsonString}`);
+            }
+        }
+    } catch (error) {
+        await db.insertLogMessage(`Error al recibir notificacion MP. ${error}`);
+        res.status(400).json({ message: 'Error al recibir notificacion MP.' });
+    }
+});
+
+const verificarNotificacionCarga = async (id_notificacion_carga, id_usuario, id_cuenta_bancaria) => {
+    try {
+        const query1 = `select * from Verificar_Notificacion_Carga(${id_notificacion_carga})`;
+        const result1 = await db.handlerSQL(query1);
+        if (result1.rows[0].id_operacion_carga > 0) 
+        {
+            const monto_total = result1.rows[0].monto;
+            const bono = result1.rows[0].bono;
+            const id_operacion = result1.rows[0].id_operacion;
+            const id_cliente = result1.rows[0].id_cliente;
+            const cliente_usuario = result1.rows[0].usuario;
+            const id_cliente_ext = result1.rows[0].id_cliente_ext;
+            const id_cliente_db = result1.rows[0].id_cliente_db;
+            const agente_usuario = result1.rows[0].agente_usuario;
+            const agente_password = result1.rows[0].agente_password;
+            const id_operacion_carga = result1.rows[0].id_operacion_carga;
+            const cantidad_cargas = result1.rows[0].cantidad_cargas;
+            const referente_id_cliente = result1.rows[0].referente_id_cliente;
+            const referente_usuario = result1.rows[0].referente_usuario;
+            const referente_id_cliente_ext = result1.rows[0].referente_id_cliente_ext;
+            const referente_id_cliente_db = result1.rows[0].referente_id_cliente_db;
+            const id_plataforma = result1.rows[0].id_plataforma;
+
+            let resultado = '';
+            if (id_plataforma == 1 || id_plataforma == 2) {
+                const carga_manual1 = require('./scrap_bot3/cargar.js');
+                resultado = await carga_manual1(id_cliente_ext, id_cliente_db, cliente_usuario.trim(), String(monto_total), agente_usuario, agente_password);
+            }
+            //console.log(`Resultado carga = ${resultado}`);
+            if (resultado == 'ok') 
+            {
+                const query3 = `select * from Confirmar_Notificacion_Carga(${id_notificacion_carga}, ${id_operacion_carga}, ${id_operacion}, ${id_usuario}, ${id_cuenta_bancaria})`;
+                await db.handlerSQL(query3);
+                //console.log(`Confirmar = ${query3}`);
+                //console.log(`Cantidad cargas = ${cantidad_cargas}`);
+                if (cantidad_cargas == 0 && referente_id_cliente > 0) {
+                    //console.log(`referente_id_cliente = ${referente_id_cliente}`);
+                    //console.log(`referente_id_cliente_ext = ${referente_id_cliente_ext}`);
+                    //console.log(`referente_id_cliente_db = ${referente_id_cliente_db}`);
+                    //console.log(`referente_usuario = ${referente_usuario}`);
+                    //console.log(`bono = ${bono}`);
+                    //resultado = await carga_manual3(id_cliente_ext, id_cliente_db, cliente_usuario.trim(), String(monto_total), agente_usuario, agente_password);
+                    resultado = '';
+                    if (id_plataforma == 1 || id_plataforma == 2) {
+                        //console.log(`id_plataforma = ${id_plataforma}`);
+                        const carga_manual2 = require('./scrap_bot3/cargar.js');
+                        resultado = await carga_manual2(referente_id_cliente_ext, referente_id_cliente_db, referente_usuario.trim(), String(bono), agente_usuario, agente_password);
+                        //console.log(resultado);
+                    }
+                    if (resultado == 'ok')
+                    {
+                        const query2 = `select * from Cargar_Bono_Referido(${referente_id_cliente}, ${id_usuario}, ${bono}, ${id_cuenta_bancaria}, ${id_operacion})`;
+                        //console.log(`Referido = ${query2}`);
+                        await db.handlerSQL(query2);
+                    } else {
+                        await db.insertLogMessage(`Error en la Carga Referente: ${resultado} - [${id_notificacion_carga}, ${id_operacion_carga}]`);
+                    }
+                }
+            } else {
+                await db.insertLogMessage(`Error en la Carga: ${resultado} - [${id_notificacion_carga}, ${id_operacion_carga}]`);
+            }
+            return resultado;
+        }
+    } catch (error) {
+        return 'error';
+    }
+};

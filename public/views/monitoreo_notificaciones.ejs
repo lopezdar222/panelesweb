@@ -1,0 +1,66 @@
+<html>
+<head>
+    <h2><%= title %></h2> 
+</head>
+<body>
+<!----------------------INICIO FILTER & SEARCH----------------------->
+    <div class="wrapper">
+        <div class="search-container">
+            <input type="search" id="search-input" placeholder="Busqueda rápida ↯">
+            <span class="material-symbols-outlined">search</span>
+
+            <button onclick="abrirModal(18);" class="help">
+                <!img src="../img/ayuda.png" style="width:40px;height:40px;"-->
+                <span class="material-symbols-outlined">help_center</span>
+            </button>
+
+        </div>
+    </div>
+    <table id="miTabla">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Oficina</th>
+                <th>Fecha/Hora</th>
+                <th>Cuenta</th>
+                <th>Usuario</th>
+                <th>Monto</th>
+                <th>Procesado</th>
+                <th>Cliente</th>
+                <th>Agente</th>
+                <th>Panel</th>
+            </tr>
+        </thead>
+        <tbody>	
+            <% datos.forEach(function(dato) { %>
+                <tr>
+                    <td><%= dato.id_notificacion %></td>
+                    <td><%= dato.oficina %></td>
+                    <td><%= dato.fecha_hora %></td>
+                    <td><%= dato.nombre %></td>
+                    <td><%= dato.carga_usuario %></td>
+                    <td><%= dato.carga_monto %></td>
+                    <% if (dato.marca_procesado == true) { %>
+                        <td><%= dato.fecha_hora_procesado %></td>
+                        <% if (dato.anulada == true) { %>
+                            <td>Pago Anulado</td>
+                            <td></td>
+                            <td></td>
+                        <% } else { %>
+                            <td><%= dato.cliente_usuario %></td>
+                            <td><%= dato.agente_usuario %></td>
+                            <td><%= dato.url_admin %></td>
+                        <% } %>
+                    <% } else { %>
+                        <td> (Sin Procesar) </td>
+                        <td> - </td>
+                        <td> - </td>
+                        <td><button onclick="abrirModal(34, <%=dato.id_notificacion %>);">ANULAR</button></td>
+                    <% } %>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+    <div id="paginacion" class="pagenumbers"></div>
+</body>
+</html>

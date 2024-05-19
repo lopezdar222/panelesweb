@@ -30,6 +30,7 @@ let bloqueando_cliente = 0;
 let cargando_cobro_manual = 0;
 let cargando_retiro_manual = 0;
 let modificando_datos_registro = 0;
+let anulando_notificacion = 0;
 const numFilasPorPagina = 10;
 let paginaActual = 1;
 let datos = [];
@@ -62,6 +63,9 @@ function cargarContenido(url) {
             tiene_busqueda = true;
         }
         if (url.indexOf('cuentas_cobro_descargas') !== -1 ) {
+            tiene_busqueda = true;
+        }
+        if (url.indexOf('monitoreo_notificaciones') !== -1 ) {
             tiene_busqueda = true;
         }
         //Código para funcionalidad de búsqueda en tablas:
@@ -237,6 +241,7 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
     let id_oficina = '';
     let id_token = '';
     let url = '';
+    let id_notificacion = '';
     modal.style.display = 'block';
     switch (opcion)
     {
@@ -395,6 +400,11 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
             url = `/tokens_nuevo?id_oficina=${encodeURIComponent(id_oficina)}&id_rol=${encodeURIComponent(id_rol_par)}`;
             cargarContenidoModal(url);
             break;
+        case 34:
+            id_notificacion = par1;
+            url = `/monitoreo_notificaciones_anular?id_notificacion=${encodeURIComponent(id_notificacion)}`;
+            cargarContenidoModal(url);
+            break;
         default:
             console.log('Modal Vacío');
     }
@@ -407,6 +417,32 @@ function cerrarModal() {
     document.getElementById('modal-contenido').innerHTML = '';
     cargarContenido(url_ultima_invocada);
 }
+
+const anula_Notificacion_Cobro = async (id_notificacion) => {
+    if (anulando_notificacion === 1) {
+        alert('Por Favor Aguardar. Se está Procesando la Solicitud.');
+        return;
+    }
+    anulando_notificacion = 1;
+    const msgResultado = document.getElementById('msgResultado');
+    try {
+        const response = await fetch(`/anula_notificacion/${id_notificacion}/${id_usuario}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'}
+        });
+        if (response.ok) {
+            const data = await response.json();
+            msgResultado.innerHTML = data.message;
+        } else {
+            msgResultado.innerHTML = 'Error al Anular Notificación';
+        }
+        anulando_notificacion = 0;
+    } catch (error) {
+        anulando_notificacion = 0;
+        msgResultado.innerHTML = 'Error al Anular Notificación';
+    }
+};
 
 const guardar_Datos_Registro = async (id_cliente) => {
     if (modificando_datos_registro=== 1) {
@@ -1368,7 +1404,7 @@ const actualizarAlertaUsuariosClientes = async (id_cliente) => {
         });
         const data = await response.json();
         if (data.message == 'ok') {
-            msgResultado.innerHTML = '<h3 class="warning">!!!</h3>';
+            msgResultado.innerHTML = '<h1 class="danger">!!!</h1>';
         }
     } catch (error) {
         msgResultado.innerHTML = '<h3 class="warning">error en alerta</h3>';
@@ -1385,7 +1421,7 @@ const actualizarAlertaMonitoreo = async (id_cliente) => {
         });
         const data = await response.json();
         if (data.message == 'ok') {
-            msgResultado.innerHTML = '<h3 class="warning">!!!</h3>';
+            msgResultado.innerHTML = '<h1 class="danger">!!!</h1>';
         }
     } catch (error) {
         msgResultado.innerHTML = '<h3 class="warning">error en alerta</h3>';
@@ -1425,6 +1461,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             const menu07 = document.getElementById('menu07');
             const menu08 = document.getElementById('menu08');
             const menu09 = document.getElementById('menu09');
+            const menu10 = document.getElementById('menu10');
             //const indicador01 = document.getElementById('indicador01');
             //const indicador02 = document.getElementById('indicador02');
             const logout = document.getElementById('logout');
@@ -1456,6 +1493,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             const enlace_menu07 = document.getElementById('menu07');
             const enlace_menu08 = document.getElementById('menu08');
             const enlace_menu09 = document.getElementById('menu09');
+            const enlace_menu10 = document.getElementById('menu10');
             
             enlace_menu01.addEventListener('click', function(event) {
                 event.preventDefault();
@@ -1508,6 +1546,12 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             });
 
             enlace_menu09.addEventListener('click', function(event) {
+                event.preventDefault();
+                url_ultima_invocada = `${this.getAttribute('href')}?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
+                cargarContenido(url_ultima_invocada);
+            });
+
+            enlace_menu10.addEventListener('click', function(event) {
                 event.preventDefault();
                 url_ultima_invocada = `${this.getAttribute('href')}?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
                 cargarContenido(url_ultima_invocada);
