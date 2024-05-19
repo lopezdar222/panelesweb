@@ -14,12 +14,45 @@
         <li><b>Alias</b>: Alias de la Cuenta.</li>
         <li><b>CBU</b>: CBU de la Cuenta.</li>
         <li><b>Creación</b>: Fecha y Hora de creación de la Cuenta para Transferencias en el Sistema.</li>
-        <li><b>Estado</b>: Estado de la Cuenta para Transferencias en el Sistema. Si está Inactiva, no se propone al Cliente.</li>
+        <li><b>Estado</b>: Estado de la Cuenta para Transferencias en el Sistema. Si está Inactiva, 
+            el Bot no la propondrá al Cliente.</li>
     </ul>
-    <br><br>
+    <br><br><br>
     <p>Para Modificar los atributos, hacer click en el botón <b>EDITAR</b>.</p>
-    <br><br>
+    <br><br><br>
     <p>Para Crear una <b>nueva Cuenta para Transferencias</b>, hacer click en el botón <b>NUEVA CUENTA</b>.</p>
+    <br><br><br>
+    <p>Para recibir notificaciones también desde la <b>API de Mercado Pago</b>, realizar los siguientes pasos:</p>
+    <br>
+    <p>1) En la página de Desarrolladores de Mercado Pago de la propia cuenta, ingresar en "Tus integraciones" (https://www.mercadopago.com.ar/developers/es/reference)</p>
+    <br>
+    <img src="../img/ayuda/api_mp_01.png" style="width:800px;">
     <br><br>
+    <p>2) Ir a "Crear Aplicación"</p>
+    <br>
+    <img src="../img/ayuda/api_mp_02.png" style="width:800px;">
+    <br><br>
+    <p>3) Colocar el Nombre de la Aplicacion (PanelesLanding por ejemplo) y las configuraciones básicas como figura en la imagen:</p>
+    <br>
+    <img src="../img/ayuda/api_mp_03.png" style="width:800px;">
+    <br><br>
+    <p>4) Una vez creada la aplicación, ir a "Credenciales de Producción"</p>
+    <br>
+    <img src="../img/ayuda/api_mp_04.png" style="width:800px;">
+    <br><br>
+    <p>5) Completar como muestra en la imagen y Activar las Credenciales</p>
+    <br>
+    <img src="../img/ayuda/api_mp_05.png" style="width:800px;">
+    <br><br>
+    <p>6) Compartir la información de "Public Key", <b>"Access Token"</b>, "ClientID" y "Cliente Secret"</p>
+    <br>
+    <img src="../img/ayuda/api_mp_06.png" style="width:800px;">
+    <br><br>
+    <p>7) Ir a IPN, <b>solicitar el valor id_cuenta correspondiente</b>.<br>
+    <p>Completar la URL con "https://paneleslanding.com/api/mp_api?id_cuenta=id_cuenta"<p> En "Eventos" seleccionar "Pagos (Payments)". Luego hacer click en "Probar". Y finalmente Guardar.</p><br>
+    <br>
+    <img src="../img/ayuda/api_mp_07.png" style="width:800px;">
+    <br><br>
+    <h2>¡Importante! Realizar al menos una prueba con la Cuenta para verificar que la Notificación llega al Sistema.</h2>
 </div>
 <button onclick="cerrarModal();">Finalizar</button>

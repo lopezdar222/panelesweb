@@ -435,6 +435,7 @@ CREATE OR REPLACE FUNCTION Confirmar_Sesion_Cliente_Id(in_id_cliente INTEGER, in
 RETURNS TABLE (id_cliente INTEGER) AS $$
 DECLARE
     aux_id_cliente INTEGER;
+    aux_id_agente INTEGER;
     aux_bloqueado BOOLEAN;
 BEGIN
 	IF NOT EXISTS (SELECT 1
@@ -444,15 +445,21 @@ BEGIN
 							AND cl.bloqueado = true))
 	THEN 
 	
-		SELECT cl.id_cliente, cl.bloqueado
-		INTO aux_id_cliente, aux_bloqueado
-		FROM cliente cl 
+		SELECT cl.id_cliente, cl.bloqueado, COALESCE(ag.id_agente, -1)
+		INTO aux_id_cliente, aux_bloqueado, aux_id_agente
+		FROM cliente cl LEFT JOIN agente ag
+			ON (ag.id_agente = cl.id_agente
+			   AND ag.marca_baja = false)
 		WHERE cl.id_cliente = in_id_cliente;
 
 		IF (aux_bloqueado) THEN
 			aux_id_cliente := -1;
 		END IF;	
-		
+
+		IF (aux_id_agente < 0) THEN
+			aux_id_cliente := -3;
+		END IF;	
+	
 		IF (aux_id_cliente > 0) THEN
 			UPDATE cliente_sesion
 			SET cierre_abrupto = true,
@@ -475,6 +482,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+select * from cliente where cliente_usuario = 'julio995'
+select * from agente where id_agente in (15,21)
+select * from oficina where id_oficina in (4,6)
+select * from cliente where id_agente = 21
+update cliente set bloqueado = true where id_agente = 15
+
+select * from cliente_sesion 
+where id_cliente in (select id_cliente from cliente where id_agente = 15)
+order by 1 desc
+
+select * from cliente_sesion where ip = '201.235.221.173' order by 1 desc
+delete from cliente_sesion where id_cliente_sesion in (27604, 27488, 27487, 27470)
+
 --DROP FUNCTION Confirmar_Sesion_Cliente_Registro(in_agente VARCHAR(200), in_usuario VARCHAR(200), in_password VARCHAR(200), in_id_token VARCHAR(30), in_ip VARCHAR(100), in_monto NUMERIC, in_moneda VARCHAR(30), in_cliente_ext BIGINT, in_cliente_db INTEGER);
 CREATE OR REPLACE FUNCTION Confirmar_Sesion_Cliente_Registro(in_agente VARCHAR(200), in_usuario VARCHAR(200), in_password VARCHAR(200), in_id_token VARCHAR(30), in_ip VARCHAR(100), in_monto NUMERIC, in_moneda VARCHAR(30), in_cliente_ext BIGINT, in_cliente_db INTEGER)
 RETURNS TABLE (id_cliente INTEGER) AS $$
@@ -495,7 +515,8 @@ BEGIN
 		SELECT id_agente, tokens_bono_creacion, tokens_bono_carga_1
 		INTO aux_id_agente, aux_bono_creacion, aux_bono_carga_1
 		FROM agente
-		WHERE agente_usuario = in_agente;
+		WHERE agente_usuario = in_agente
+		AND marca_baja = false;
 		
 		IF aux_id_agente > 0 THEN
 			
@@ -1636,13 +1657,20 @@ BEGIN
 			   	AND nc.id_notificacion_carga = in_id_notificacion_carga)
 		JOIN notificacion n
 			ON (n.id_notificacion = nc.id_notificacion
-				AND n.id_cuenta_bancaria = 1
+				-- AND n.id_cuenta_bancaria = 1
 			   AND n.id_origen = 1)
 		JOIN operacion op
 			ON (op.id_operacion = opc.id_operacion
 			   AND op.id_estado = 1
 			   AND op.marca_baja = false
-			   AND op.id_accion = 1);
+			   AND op.id_accion = 1)
+		JOIN cliente cl
+			ON (op.id_cliente = cl.id_cliente)
+		JOIN agente ag
+			ON (cl.id_agente = ag.id_agente)
+		JOIN usuario u
+			ON (n.id_usuario = u.id_usuario
+			   AND u.id_oficina = ag.id_oficina);
 
 	IF (aux_id_operacion_carga IS NULL) THEN
 		aux_id_operacion_carga := -1;
@@ -1692,6 +1720,8 @@ $$ LANGUAGE plpgsql;
 -- select * from Verificar_Notificacion_Carga(260);
 -- select * from Verificar_Notificacion_Carga(261);
 -- select * from Verificar_Notificacion_Carga(564);
+-- select * from Verificar_Notificacion_Carga(2086);
+-- select * from Verificar_Notificacion_Carga(2084);
 
 -- DROP FUNCTION Verificar_Operacion_Carga(in_id_operacion INTEGER)
 CREATE OR REPLACE FUNCTION Verificar_Operacion_Carga(in_id_operacion INTEGER)
@@ -1733,11 +1763,18 @@ BEGIN
 			   	AND nc.id_operacion_carga IS NULL)
 		JOIN notificacion n
 			ON (n.id_notificacion = nc.id_notificacion
-				AND n.id_cuenta_bancaria = 1
+				-- AND n.id_cuenta_bancaria = 1
 			   	AND n.id_origen = 1)
 		JOIN operacion op
 			ON (op.id_operacion = opc.id_operacion
-				AND op.id_operacion = in_id_operacion);
+				AND op.id_operacion = in_id_operacion)
+		JOIN cliente cl
+			ON (op.id_cliente = cl.id_cliente)
+		JOIN agente ag
+			ON (cl.id_agente = ag.id_agente)
+		JOIN usuario u
+			ON (n.id_usuario = u.id_usuario
+			   AND u.id_oficina = ag.id_oficina);
 
 	IF (aux_id_operacion_carga IS NULL) THEN
 		aux_id_operacion_carga := -1;
@@ -2460,35 +2497,44 @@ FROM	notificacion n JOIN notificacion_carga nc
 				ON (pl.id_plataforma = ag.id_plataforma); 
 --select * from v_Notificaciones_Cargas order by fecha_hora_procesado desc;
 
+
+select 	oficina,
+		agente_usuario, 
+		plataforma,
+		sum(carga_importe)	as cargas,
+		sum(carga_bono)		as bonos,
+		sum(CASE WHEN id_accion in (1, 5, 9) THEN 1 ELSE 0 END) as cant_cargas,
+		sum(retiro_importe)	as retiros,
+		sum(CASE WHEN id_accion in (2, 6) THEN 1 ELSE 0 END) as cant_retiros
+from v_Clientes_Operaciones
+where id_estado = 2
+and id_accion in (1, 2, 5, 6, 9)
+and fecha_hora_proceso >= '2024-05-19 00:00:00'
+group by oficina,
+		agente_usuario, 
+		plataforma;
+
+-- 19/5 
+-- 18/5 1670
+-- 17/5 1709
+-- 16/5 1645
+-- 15/5 1424
+-- 14/5 471
+
+SELECT * FROM registro_sesiones_sockets order by 1 desc limit 20
+
+
 select *
 from v_Clientes_Operaciones 
 where marca_baja = false
 
+select * from v_Cuentas_Bancarias
+WHERE id_oficina > 2
+order by 1
 
-
-select * from notificacion_carga where id_notificacion_carga = 572
-select * from operacion_carga where id_operacion_carga = 7990
-
-select * from cuenta_bancaria order by 1
-select * from cuenta_bancaria_mercado_pago order by id_cuenta_bancaria
-select * from cuenta_bancaria_aplicacion
-select * from usuario
-
-select * from operacion order by 1 desc
-select * from operacion_carga order by 1 desc
-select * from notificacion order by 1 desc
-select * from notificacion_carga order by 1 desc
 select * from v_Console_Logs
 
-select * from cliente order by 1 desc
-select * from cliente_sesion order by 1 desc
-
 select * from v_Tokens
-
-select * from operacion_carga
-
-select * from registro_token order by 1 desc
-select * from operacion order by 1 desc
 
 insert into registro_token (id_token, de_agente, activo, id_usuario, ingresos, registros, fecha_hora_creacion, id_usuario_ultima_modificacion, fecha_hora_ultima_modificacion)
 select 	concat('c-', id_cliente::varchar, '-', substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)),
@@ -2508,32 +2554,23 @@ where id_cliente not in (select id_usuario
 SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
 INTO aux_token;
 
---select * from cliente_sesion
+/*****************************/
+/*Anulacion de notificaciones*/
 
-select 	oficina,
-		agente_usuario, 
-		plataforma,
-		sum(carga_importe)	as cargas,
-		sum(carga_bono)		as bonos,
-		sum(CASE WHEN id_accion in (1, 5, 9) THEN 1 ELSE 0 END) as cant_cargas,
-		sum(retiro_importe)	as retiros,
-		sum(CASE WHEN id_accion in (2, 6) THEN 1 ELSE 0 END) as cant_retiros
-from v_Clientes_Operaciones
-where id_oficina = 2
-and id_estado = 2
-and id_accion in (1, 2, 5, 6, 9)
-and fecha_hora_proceso >= '2024-05-19 00:00:00'
-group by oficina,
-		agente_usuario, 
-		plataforma;
+SELECT n.*
+FROM notificacion n JOIN notificacion_carga nc
+	ON (n.id_notificacion = nc.id_notificacion
+		AND n.fecha_hora < NOW() - INTERVAL '1 hour'
+		AND n.anulada = false
+	   	AND nc.id_operacion_carga IS NULL
+	   	AND nc.marca_procesado = false)
+ORDER BY n.fecha_hora
 
--- 19/5 
--- 18/5 1670
--- 17/5 1709
--- 16/5 1645
--- 15/5 1424
--- 14/5 471
-
-SELECT * FROM registro_sesiones_sockets order by 1 desc limit 20
-
-select * from v_Console_Logs
+SELECT  id_notificacion
+FROM	v_Notificaciones_Cargas
+	WHERE fecha_hora < NOW() - INTERVAL '1 hour'
+	AND anulada = false
+	AND id_operacion_carga IS NULL
+	AND marca_procesado = false
+ORDER BY fecha_hora
+LIMIT 1
