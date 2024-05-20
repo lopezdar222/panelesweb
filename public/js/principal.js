@@ -56,6 +56,9 @@ function cargarContenido(url) {
         if (url.indexOf('tokens') !== -1 ) {
             tiene_busqueda = true;
         }
+        if (url.indexOf('monitoreo_landingweb_fijo') !== -1 ) {
+            tiene_busqueda = true;
+        }
         if (url.indexOf('monitoreo_landingweb') !== -1 ) {
             tiene_busqueda = true;
         }
@@ -1462,6 +1465,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             const menu08 = document.getElementById('menu08');
             const menu09 = document.getElementById('menu09');
             const menu10 = document.getElementById('menu10');
+            const menu11 = document.getElementById('menu11');
             //const indicador01 = document.getElementById('indicador01');
             //const indicador02 = document.getElementById('indicador02');
             const logout = document.getElementById('logout');
@@ -1494,6 +1498,7 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
             const enlace_menu08 = document.getElementById('menu08');
             const enlace_menu09 = document.getElementById('menu09');
             const enlace_menu10 = document.getElementById('menu10');
+            const enlace_menu11 = document.getElementById('menu11');
             
             enlace_menu01.addEventListener('click', function(event) {
                 event.preventDefault();
@@ -1557,6 +1562,12 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                 cargarContenido(url_ultima_invocada);
             });
 
+            enlace_menu11.addEventListener('click', function(event) {
+                event.preventDefault();
+                url_ultima_invocada = `${this.getAttribute('href')}?id_usuario=${encodeURIComponent(id_usuario)}&id_rol=${id_rol}&id_token=${encodeURIComponent(id_token)}`;
+                cargarContenido(url_ultima_invocada);
+            });
+
             // Obtén el modal y el botón para cerrar el modal
             const spanCerrarModal = document.getElementById('btn_cerrar_modal');
             //const btnMostrarModal = document.getElementById('btn_abrir_modal');
@@ -1601,7 +1612,8 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                         alertaSistemaOperativo(data.alerta, data.id_cliente);
                     }
                 } else {
-                    if (url_ultima_invocada.indexOf('monitoreo_landingweb') !== -1 ) {
+                    if (url_ultima_invocada.indexOf('monitoreo_landingweb') !== -1 
+                            && url_ultima_invocada.indexOf('monitoreo_landingweb_fijo') == -1 ) {
                         cargarContenido(url_ultima_invocada);
                     } else {
                         actualizarAlertaMonitoreo(data.id_cliente);

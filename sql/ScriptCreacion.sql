@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS cuenta_bancaria
     nombre character varying(200) NOT NULL,
     alias character varying(200) NOT NULL,
     cbu character varying(200) NOT NULL,
+	id_billetera integer NOT NULL DEFAULT 1,
     marca_baja boolean NOT NULL DEFAULT false,
     fecha_hora_creacion timestamp NOT NULL,
 	id_usuario_creacion integer NOT NULL DEFAULT 0,
@@ -86,6 +87,20 @@ CREATE TABLE IF NOT EXISTS cuenta_bancaria
     PRIMARY KEY (id_cuenta_bancaria)
 );
 CREATE INDEX cuenta_bancaria_id_oficina ON cuenta_bancaria (id_oficina);
+CREATE INDEX cuenta_bancaria_id_billetera ON cuenta_bancaria (id_billetera);
+
+DROP TABLE IF EXISTS billetera;
+CREATE TABLE IF NOT EXISTS billetera
+(
+    id_billetera serial NOT NULL,
+    billetera character varying(100) NOT NULL,
+    marca_baja boolean NOT NULL DEFAULT false,
+    fecha_hora_creacion timestamp NOT NULL,
+	id_usuario_creacion integer NOT NULL DEFAULT 0,
+    fecha_hora_ultima_modificacion timestamp NOT NULL,
+	id_usuario_ultima_modificacion integer NOT NULL DEFAULT 0,
+    PRIMARY KEY (id_cuenta_bancaria)
+);
 
 DROP TABLE IF EXISTS cuenta_bancaria_descarga;
 CREATE TABLE IF NOT EXISTS cuenta_bancaria_descarga
@@ -536,7 +551,7 @@ BEGIN
 				
 			ELSE			
 				INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion, id_cliente_ext, id_cliente_db)
-				VALUES (lower(in_usuario), in_password, aux_id_agente, true, false, now(), 1,  now(), 1, in_cliente_ext, in_cliente_db)
+				VALUES (lower(trim(in_usuario)), in_password, aux_id_agente, true, false, now(), 1,  now(), 1, in_cliente_ext, in_cliente_db)
 				RETURNING cliente.id_cliente INTO aux_id_cliente;
 
 				INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
@@ -613,7 +628,7 @@ BEGIN
 			WHERE agente_usuario = in_agente;
 
 			INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-			VALUES (lower(in_usuario), in_password, aux_id_agente, true, false, now(), 1,  now(), 1)
+			VALUES (lower(trim(in_usuario)), in_password, aux_id_agente, true, false, now(), 1,  now(), 1)
 			RETURNING cliente.id_cliente INTO aux_id_cliente;
 			
 			INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
@@ -657,7 +672,7 @@ DECLARE
 	aux_bono_creacion INTEGER;
 BEGIN
 	INSERT INTO cliente (cliente_usuario, cliente_password, id_agente, en_sesion, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion, id_registro_token, correo_electronico, telefono, id_cliente_ext, id_cliente_db)
-	VALUES (lower(in_usuario), in_password, in_id_agente, false, false, now(), 1,  now(), 1, in_id_registro_token, in_correo_electronico, in_telefono, in_id_cliente_ext, in_id_cliente_db)
+	VALUES (lower(trim(in_usuario)), in_password, in_id_agente, false, false, now(), 1,  now(), 1, in_id_registro_token, in_correo_electronico, in_telefono, in_id_cliente_ext, in_id_cliente_db)
 	RETURNING cliente.id_cliente INTO aux_id_cliente;
 
 	INSERT INTO operacion (codigo_operacion, id_accion, id_cliente, id_estado, notificado, marca_baja, fecha_hora_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
@@ -1021,26 +1036,32 @@ SELECT 	cb.id_oficina,
 FROM 	cuenta_bancaria cb join oficina o
 			on (cb.id_oficina = o.id_oficina
 			   	AND cb.marca_baja = false)
-		LEFT JOIN (select 	oc.id_cuenta_bancaria, 
-							count(oc.importe) as cantidad_cargas, 
-							sum(oc.importe) as monto_cargas
-					from 	operacion_carga oc join operacion op
-							on (op.id_operacion = oc.id_operacion
-									and op.marca_baja = false
-									and op.id_accion IN (1,5)  --accion de carga
-									and op.id_estado = 2) --estado aceptado
-				   			join (select 	cb.id_cuenta_bancaria, 
-												coalesce(max(cbd.fecha_hora_descarga), '1900-01-01 00:00:00') as fecha_descarga
-										from cuenta_bancaria cb left join cuenta_bancaria_descarga cbd
-											on (cb.id_cuenta_bancaria = cbd.id_cuenta_bancaria)
-										where cbd.marca_baja = false
-										group by cb.id_cuenta_bancaria) cbd
-								on (oc.id_cuenta_bancaria = cbd.id_cuenta_bancaria
-									and op.fecha_hora_ultima_modificacion >= cbd.fecha_descarga)
-					group by oc.id_cuenta_bancaria) cbc
+		LEFT JOIN v_Cuenta_Bancaria_Subtotales cbc
 			on (cb.id_cuenta_bancaria = cbc.id_cuenta_bancaria)
 ORDER BY cb.id_oficina, coalesce(cbc.monto_cargas, 0), coalesce(cbc.cantidad_cargas, 0);
 --SELECT * FROM v_Cuenta_Bancaria_Activa
+
+--DROP VIEW v_Cuenta_Bancaria_Subtotales;
+CREATE OR REPLACE VIEW v_Cuenta_Bancaria_Subtotales AS
+select 	oc.id_cuenta_bancaria, 
+		count(oc.importe) as cantidad_cargas, 
+		sum(oc.importe) as monto_cargas
+from 	operacion_carga oc join operacion op
+		on (op.id_operacion = oc.id_operacion
+				and op.marca_baja = false
+				and op.id_accion IN (1,5)  --accion de carga
+				and op.id_estado = 2) --estado aceptado
+		join (select cb.id_cuenta_bancaria, 
+							coalesce(max(cbd.fecha_hora_descarga), '1900-01-01 00:00:00') as fecha_descarga
+					from cuenta_bancaria cb left join cuenta_bancaria_descarga cbd
+						on (cb.id_cuenta_bancaria = cbd.id_cuenta_bancaria
+						   	AND cbd.marca_baja = false)
+					-- where cbd.marca_baja = false
+					group by cb.id_cuenta_bancaria) cbd
+			on (oc.id_cuenta_bancaria = cbd.id_cuenta_bancaria
+				and op.fecha_hora_ultima_modificacion >= cbd.fecha_descarga)
+group by oc.id_cuenta_bancaria
+--select * from v_Cuenta_Bancaria_Subtotales
 
 --DROP FUNCTION Descargar_Cuenta_Bancaria(in_id_usuario INTEGER, in_id_cuenta_bancaria INTEGER);
 CREATE OR REPLACE FUNCTION Descargar_Cuenta_Bancaria(in_id_usuario INTEGER, in_id_cuenta_bancaria INTEGER) 
@@ -1511,7 +1532,6 @@ CREATE TABLE IF NOT EXISTS notificacion
 CREATE INDEX notificacion_id_usuario ON notificacion (id_usuario);
 CREATE INDEX notificacion_id_cuenta_bancaria ON notificacion (id_cuenta_bancaria);
 CREATE INDEX notificacion_fecha_hora ON notificacion (fecha_hora DESC);
-
 
 DROP TABLE IF EXISTS notificacion_carga;
 CREATE TABLE IF NOT EXISTS notificacion_carga
@@ -2497,10 +2517,10 @@ FROM	notificacion n JOIN notificacion_carga nc
 				ON (pl.id_plataforma = ag.id_plataforma); 
 --select * from v_Notificaciones_Cargas order by fecha_hora_procesado desc;
 
-
 select 	oficina,
 		agente_usuario, 
 		plataforma,
+		CASE WHEN id_notificacion > 0 THEN 'Automatico' ELSE 'Manual' END AS Tipo,
 		sum(carga_importe)	as cargas,
 		sum(carga_bono)		as bonos,
 		sum(CASE WHEN id_accion in (1, 5, 9) THEN 1 ELSE 0 END) as cant_cargas,
@@ -2509,19 +2529,25 @@ select 	oficina,
 from v_Clientes_Operaciones
 where id_estado = 2
 and id_accion in (1, 2, 5, 6, 9)
-and fecha_hora_proceso >= '2024-05-19 00:00:00'
+and fecha_hora_proceso >= '2024-05-20 00:00:00'
 group by oficina,
 		agente_usuario, 
-		plataforma;
+		plataforma, Tipo
+order by oficina,
+		agente_usuario, 
+		plataforma, Tipo;
 
--- 19/5 
+select * from v_Clientes_Operaciones where id_cliente = 3060
+select * from cliente where id_cliente = 3060
+
+
 -- 18/5 1670
 -- 17/5 1709
 -- 16/5 1645
 -- 15/5 1424
 -- 14/5 471
 
-SELECT * FROM registro_sesiones_sockets order by 1 desc limit 20
+SELECT * FROM registro_sesiones_sockets order by 1 desc limit 2000
 
 
 select *
@@ -2554,13 +2580,20 @@ where id_cliente not in (select id_usuario
 SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 40)
 INTO aux_token;
 
+select * from v_Cuenta_Bancaria_Mercado_Pago 
+where id_oficina = 2
+order by 1
+
+select * from cliente where cliente_usuario = 'paulcarabajal688p'
+select * from cliente_chat where id_cliente = 2340
+
 /*****************************/
 /*Anulacion de notificaciones*/
 
 SELECT n.*
 FROM notificacion n JOIN notificacion_carga nc
 	ON (n.id_notificacion = nc.id_notificacion
-		AND n.fecha_hora < NOW() - INTERVAL '1 hour'
+		AND n.fecha_hora < NOW() - INTERVAL '5 hour'
 		AND n.anulada = false
 	   	AND nc.id_operacion_carga IS NULL
 	   	AND nc.marca_procesado = false)
@@ -2574,3 +2607,24 @@ FROM	v_Notificaciones_Cargas
 	AND marca_procesado = false
 ORDER BY fecha_hora
 LIMIT 1
+
+select * from v_Notificaciones_Cargas
+where anulada = false
+	AND id_operacion_carga IS NULL
+	AND marca_procesado = false
+ORDER BY fecha_hora
+
+select * from cliente where lower(trim(cliente_usuario)) = 'gigi00222c';
+select * from cliente 
+order by cliente_usuario
+where lower(trim(cliente_usuario)) = 'angie9822p';
+
+select  cl.cliente_usuario, cc.* 
+from cliente_chat cc join cliente cl
+	on (cc.id_cliente = cl.id_cliente)
+order by 2 desc
+--order by cc.id_cliente_chat desc
+update cliente set cliente_usuario = lower(trim(cliente_usuario));
+
+select * from v_Clientes_Operaciones
+

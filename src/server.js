@@ -28,7 +28,9 @@ const ejecucion_servidor_numero = 1;
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../public/views'));
 //Whatsapp/////////////////////////////////////////////////////////////////////
-const dias_historial = 15;
+const dias_historial = 4;
+const dias_historial_operaciones = 7;
+const horas_historial_operaciones = 1;
 // Configuración de sesiones
 app.use(session({
     secret: 'tu-secreto-seguro',
@@ -1200,7 +1202,7 @@ app.get('/monitoreo_landingweb_carga', async (req, res) => {
     }
 });
 
-app.get('/monitoreo_landingweb', async (req, res) => {
+app.get('/monitoreo_landingweb_fijo', async (req, res) => {
     // Obtener los parámetros de la URL
     const id_usuario = parseInt(req.query.id_usuario, 10);
     const id_token = req.query.id_token;
@@ -1211,7 +1213,7 @@ app.get('/monitoreo_landingweb', async (req, res) => {
         //console.log(query);
         const result = await db.handlerSQL(query);
         if (result.rows.length == 0) {
-            res.render('cuentas_cobro', { message: 'error de sesión', title: 'Configuracion de Cuentas de Cobro'});
+            res.render('monitoreo_landingweb_fijo', { message: 'error de sesión', title: 'Monitoreo LandingWeb'});
             return;
         }
         const id_oficina = result.rows[0].id_oficina;
@@ -1245,7 +1247,76 @@ app.get('/monitoreo_landingweb', async (req, res) => {
                                 `carga_observaciones, ` +
                                 `id_notificacion  ` +
                         `from v_Clientes_Operaciones where marca_baja = false ` +
-                        `and (fecha_hora_operacion > CURRENT_DATE - INTERVAL '${dias_historial} days' or id_estado = 1) `;
+                        //`and (fecha_hora_operacion > NOW() - INTERVAL '${horas_historial_operaciones} hour' or id_estado = 1) `;
+                        `and (fecha_hora_operacion > CURRENT_DATE - INTERVAL '${dias_historial_operaciones} days' or id_estado = 1) `;
+        if (id_rol > 1) {
+            query2 = query2 + `and id_oficina = ${id_oficina} `;
+        }
+        query2 = query2 + `order by id_operacion desc;`;
+        //console.log('Paso 2');
+        //console.log(query2);
+        const result2 = await db.handlerSQL(query2);
+        if (result2.rows.length == 0) {
+            res.render('monitoreo_landingweb_fijo', { message: 'No hay Actividad', title: 'Historial LandingWeb', id_oficina : id_oficina});
+            return;
+        }
+        const datos = result2.rows;
+
+        //console.log('Paso 3');
+        res.render('monitoreo_landingweb_fijo', { message: 'ok', title: 'Historial LandingWeb', id_oficina : id_oficina, datos : datos });
+    }
+    catch (error) {
+        res.render('monitoreo_landingweb_fijo', { message: 'error', title: 'Historial LandingWeb'});
+    }
+});
+
+app.get('/monitoreo_landingweb', async (req, res) => {
+    // Obtener los parámetros de la URL
+    const id_usuario = parseInt(req.query.id_usuario, 10);
+    const id_token = req.query.id_token;
+    const id_rol = parseInt(req.query.id_rol, 10);
+    try {
+        const query = `select * from Obtener_Usuario_Token(${id_usuario},'${id_token}')`;
+        //console.log('Paso 1');
+        //console.log(query);
+        const result = await db.handlerSQL(query);
+        if (result.rows.length == 0) {
+            res.render('monitoreo_landingweb', { message: 'error de sesión', title: 'Monitoreo LandingWeb'});
+            return;
+        }
+        const id_oficina = result.rows[0].id_oficina;
+        let query2 = `select    id_cliente,` +
+                                `cliente_usuario,` +
+                                `id_agente,` +
+                                `agente_usuario,` +
+                                `id_plataforma,` +
+                                `plataforma,` +
+                                `id_oficina,` +
+                                `oficina,` +
+                                `id_operacion,` +
+                                `codigo_operacion,` +
+                                `id_estado,` +
+                                `estado,` +
+                                `id_accion,` +
+                                `accion,` +
+                                `cliente_confianza,` +
+                                `TO_CHAR(fecha_hora_operacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_operacion,` +
+                                `TO_CHAR(fecha_hora_proceso, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_proceso,` +
+                                `TO_CHAR(retiro_importe, '999,999,999,999') as retiro_importe_formato,` +
+                                `retiro_importe,` +
+                                `retiro_cbu,` +
+                                `retiro_titular,` +
+                                `TO_CHAR(carga_importe + carga_bono, '999,999,999,999') as carga_importe_total_formato,` +
+                                `TO_CHAR(carga_importe, '999,999,999,999') as carga_importe_formato,` +
+                                `TO_CHAR(carga_bono, '999,999,999,999') as carga_bono_formato,` +
+                                `carga_importe,` +
+                                `carga_bono, ` +
+                                `carga_titular, ` +
+                                `carga_observaciones, ` +
+                                `id_notificacion  ` +
+                        `from v_Clientes_Operaciones where marca_baja = false ` +
+                        `and (fecha_hora_operacion > NOW() - INTERVAL '${horas_historial_operaciones} hour' or id_estado = 1) `;
+                        // `and (fecha_hora_operacion > CURRENT_DATE - INTERVAL '${dias_historial_operaciones} days' or id_estado = 1) `;
         if (id_rol > 1) {
             query2 = query2 + `and id_oficina = ${id_oficina} `;
         }
@@ -1770,38 +1841,6 @@ app.get('/logout', async (req, res) => {
     await db.handlerSQL(cierre);
 });
 
-// para establecer las distintas rutas, necesitamos instanciar el express router
-var router = express.Router();        
-
-router.post('/login', async (req, res) => {
-    try {    
-        const { username, password, version } = req.body;
-        if (version == 'web' || version == 'v4') 
-        {
-            const query = `select * from Obtener_Usuario('${username}', true)`;
-            const result = await db.handlerSQL(query);
-            if (result.rows.length === 0) {
-                res.status(401).json({ message: 'Nombre de usuario incorrecto.' });
-                return;
-            }
-            const user = result.rows[0];
-            
-            const isPasswordValid = await bcrypt.compare(password, user.password);
-            
-            if (isPasswordValid) {
-                res.status(201).json({ message: user.id_usuario });
-            } else {
-                res.status(401).json({ message: 'Contraseña incorrecta.' });
-            }
-        } else {
-            res.status(402).json({ message: 'Por Favor Actualizar App PanelesNoti' });
-        }
-    } catch (error) {
-        console.error('Error al buscar usuario:', error);
-        res.status(500).json({ message: 'Error al iniciar sesión.' });
-    }
-});
-
 app.post('/crear_cuenta_bancaria/:id_oficina/:id_usuario/:nombre/:alias/:cbu/:estado', async (req, res) => {
     try {    
             const { id_oficina, id_usuario, nombre, alias, cbu, estado } = req.params;
@@ -1992,6 +2031,29 @@ app.get('/descargar/:nombreArchivo', (req, res) => {
 var router = express.Router();  
 
 app.use('/api', router);
+
+router.post('/login_test', async (req, res) => {
+    try {    
+        const { username, password } = req.body;
+        const query = `select * from Obtener_Usuario('${username}', true)`;
+        const result = await db.handlerSQL(query);
+        if (result.rows.length == 0) {
+            res.status(401).json({ message: 'Nombre de usuario incorrecto.' });
+             return;
+        }
+        const user = result.rows[0];
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        
+        if (isPasswordValid) {
+            res.status(201).json({ message: 'Login Ok' });
+        } else {
+            res.status(401).json({ message: 'Contraseña incorrecta.' });
+        }
+    } catch (error) {
+        console.error('Error al buscar usuario:', error);
+        res.status(500).json({ message: 'Error al iniciar sesión.' });
+    }
+});
 
 // Ruta para recibir notificaciones IPN/webhook
 router.post('/webhook', async (req, res) => {

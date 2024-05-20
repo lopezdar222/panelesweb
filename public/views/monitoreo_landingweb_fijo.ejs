@@ -1,0 +1,102 @@
+<html>
+<head>
+    <h2><%= title %></h2> 
+</head>
+<body>
+    <%if (message === 'ok') {%>
+    <!----------------------INICIO FILTER & SEARCH----------------------->
+        <div class="wrapper">
+            <div class="search-container">
+                <input type="search" id="search-input" placeholder="Busqueda rápida ↯">
+                <span class="material-symbols-outlined">search</span>
+
+                <button onclick="abrirModal(18);" class="help">
+                    <span class="material-symbols-outlined">help_center</span>
+                </button>
+
+            </div>
+        </div>
+        <table id="miTabla">
+            <thead>
+                <tr>
+                    <th>Oficina</th>
+                    <th>Plataforma</th>
+                    <th>Agente</th>
+                    <th>Fecha/Hora</th>
+                    <th>Usuario</th>
+                    <th>Operación</th>
+                    <th>Accion</th>
+                    <th>Estado</th>
+                    <th>Detalle</th>
+                    <th>Procesado</th>
+                </tr>
+            </thead>
+            <tbody>	
+                <% datos.forEach(function(dato) { %>
+                    <tr>
+                        <td><%= dato.oficina %></td>
+                        <td><%= dato.plataforma %></td>
+                        <td><%= dato.agente_usuario %></td>
+                        <td><%= dato.fecha_hora_operacion %></td>
+                        <td><%= dato.cliente_usuario %>
+                            <% if (dato.cliente_confianza < 34) { %>
+                                <p class="danger"> (<%= dato.cliente_confianza %> %)</p>
+                            <% } else if (dato.cliente_confianza < 67) { %>
+                                <p class="warning">(<%= dato.cliente_confianza %> %)</p>
+                            <% } else { %>
+                                <p class="success">(<%= dato.cliente_confianza %> %)</p>
+                            <% } %>
+                        </td>
+                        <td><%= dato.codigo_operacion %></td>
+                        <td><%= dato.accion %></td>
+                        <td><% if (dato.id_estado == 1) { %>
+                                <div class="warning"><%= dato.estado %></div>
+                            <% } else if (dato.id_estado == 2) { %>
+                                <div class="success"><%= dato.estado %>
+                                    <% if (dato.id_notificacion > 0) { %>
+                                        (Noti : <%=dato.id_notificacion %>)
+                                    <% } %>
+                                </div>
+                            <% } else if (dato.id_estado == 3) { %>
+                                <div class="danger"><%= dato.estado %></div>
+                            <% } else { %>
+                                <%= dato.estado %>
+                            <% } %>
+                        </td> 
+                        <% if (dato.id_accion == 1) { %>
+                            <td>TOTAL: <%= dato.carga_importe_total_formato.replace(',','.') %>
+                                <br>(TITULAR : <%= dato.carga_titular %>)
+                                <br>(CARGA : <%= dato.carga_importe_formato.replace(',','.') %> - BONO : <%= dato.carga_bono_formato.replace(',','.') %>)</td>
+                        <% } else if (dato.id_accion == 2) { %>
+                            <td><%= dato.retiro_importe_formato.replace(',','.') %>
+                                <br>(CBU : <%= dato.retiro_cbu %> - TITULAR : <%= dato.retiro_titular %>)</td>
+                        <% } else if (dato.id_accion == 5) { %>
+                            <td>TOTAL: <%= dato.carga_importe_total_formato.replace(',','.') %>
+                                <br>(CARGA : <%= dato.carga_importe_formato.replace(',','.') %> - BONO : <%= dato.carga_bono_formato.replace(',','.') %>)
+                                <br><a onclick="abrirModal(29, <%=dato.id_operacion %>);"><h6 class="warning">(Ver Detalle)</h6></a>
+                            </td>
+                        <% } else if (dato.id_accion == 6) { %>
+                            <td><%= dato.retiro_importe %>
+                                <br><a onclick="abrirModal(29, <%=dato.id_operacion %>);"><h6 class="warning">(Ver Detalle)</h6></a>
+                            </td>
+                        <% } else if (dato.id_accion == 9) { %>
+                            <td>BONO: <%= dato.carga_importe_total_formato.replace(',','.') %>
+                                <br>(<%= dato.carga_observaciones %>)
+                        <% } else { %>
+                            <td>-</td>
+                        <% } %>
+                        <% if (dato.id_estado == 1) { %>
+                            <td><button onclick="abrirModal(3, <%=dato.id_operacion %>, <%=dato.id_accion %>, <%=id_oficina%>);">VERIFICAR</button></td>
+                        <% } else { %>
+                            <td><%= dato.fecha_hora_proceso %></td>
+                        <% } %>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+        <div id="paginacion" class="pagenumbers"></div>
+    <%} else {%>
+        <h3><%= message %></h3>
+    <%} %>
+   </body>
+</html>
