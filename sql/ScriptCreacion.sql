@@ -961,7 +961,8 @@ $$ LANGUAGE plpgsql;
 --select Modificar_Oficina(1, 1, 'Oficina Test', '5491133682345', '5491133682345', false, 20, 0, 100, 100, 0)
 --SELECT * FROM oficina
 
-CREATE OR REPLACE FUNCTION Crear_Cuenta_Bancaria(in_id_oficina INTEGER, in_id_usuario INTEGER, in_nombre VARCHAR(200), in_alias VARCHAR(200), in_cbu VARCHAR(200), in_estado BOOLEAN) 
+--DROP FUNCTION Crear_Cuenta_Bancaria(in_id_oficina INTEGER, in_id_usuario INTEGER, in_nombre VARCHAR(200), in_alias VARCHAR(200), in_cbu VARCHAR(200), in_estado BOOLEAN)
+CREATE OR REPLACE FUNCTION Crear_Cuenta_Bancaria(in_id_oficina INTEGER, in_id_usuario INTEGER, in_nombre VARCHAR(200), in_alias VARCHAR(200), in_cbu VARCHAR(200), in_estado BOOLEAN, in_id_billetera INTEGER, in_access_token VARCHAR(200), in_public_key VARCHAR(200), in_client_id VARCHAR(200), in_client_secret VARCHAR(200)) 
 RETURNS TABLE (id_cuenta_bancaria INTEGER) AS $$
 DECLARE
     aux_id_cuenta_bancaria INTEGER;
@@ -974,15 +975,19 @@ BEGIN
 		INSERT INTO cuenta_bancaria (id_oficina, 
 									 nombre, 
 									 alias, 
-									 cbu, 
+									 cbu,
+									 id_billetera,
 									 fecha_hora_creacion,
 									 id_usuario_creacion,
 									 fecha_hora_ultima_modificacion,
 									 id_usuario_ultima_modificacion,
 									 marca_baja)
-		VALUES (in_id_oficina, in_nombre, in_alias, in_cbu, now(), in_id_usuario, now(), in_id_usuario, false)
+		VALUES (in_id_oficina, in_nombre, in_alias, in_cbu, in_id_billetera, now(), in_id_usuario, now(), in_id_usuario, false)
 		RETURNING cuenta_bancaria.id_cuenta_bancaria INTO aux_id_cuenta_bancaria;
 		
+		INSERT INTO cuenta_bancaria_mercado_pago (id_cuenta_bancaria, access_token, public_key, client_id, client_secret, marca_baja) 
+		VALUES (aux_id_cuenta_bancaria, in_access_token, in_public_key, in_client_id, in_client_secret, false);
+
 	ELSE
 		aux_id_cuenta_bancaria := 0;
 		
@@ -994,7 +999,8 @@ $$ LANGUAGE plpgsql;
 --select * from Crear_Cuenta_Bancaria(1, 1, 'Noelia Caleza', 'noelia.227.caleza.mp', '0000003100091595755417' , 1, false);
 --select * from cuenta_bancaria;
 
-CREATE OR REPLACE FUNCTION Modificar_Cuenta_Bancaria(in_id_usuario INTEGER, in_id_cuenta_bancaria INTEGER, in_nombre VARCHAR(200), in_alias VARCHAR(200), in_cbu VARCHAR(200), in_estado BOOLEAN) 
+--DROP FUNCTION Modificar_Cuenta_Bancaria(in_id_usuario INTEGER, in_id_cuenta_bancaria INTEGER, in_nombre VARCHAR(200), in_alias VARCHAR(200), in_cbu VARCHAR(200), in_estado BOOLEAN)
+CREATE OR REPLACE FUNCTION Modificar_Cuenta_Bancaria(in_id_usuario INTEGER, in_id_cuenta_bancaria INTEGER, in_nombre VARCHAR(200), in_alias VARCHAR(200), in_cbu VARCHAR(200), in_estado BOOLEAN, in_id_billetera INTEGER, in_access_token VARCHAR(200), in_public_key VARCHAR(200), in_client_id VARCHAR(200), in_client_secret VARCHAR(200)) 
 RETURNS TABLE (id_cuenta_bancaria INTEGER) AS $$
 DECLARE
     aux_id_cuenta_bancaria INTEGER;
@@ -1009,11 +1015,31 @@ BEGIN
 								alias = in_alias,
 								cbu = in_cbu,
 								marca_baja = in_estado,
+								id_billetera = in_id_billetera,
 								fecha_hora_ultima_modificacion = now(),
 								id_usuario_ultima_modificacion = in_id_usuario
 		WHERE cuenta_bancaria.id_cuenta_bancaria = in_id_cuenta_bancaria;
 		
 		aux_id_cuenta_bancaria := in_id_cuenta_bancaria;
+		
+		IF (in_id_billetera = 1) THEN
+			IF EXISTS(	SELECT 1
+						FROM cuenta_bancaria_mercado_pago cbmp
+						WHERE cbmp.id_cuenta_bancaria = in_id_cuenta_bancaria) THEN
+				
+				UPDATE cuenta_bancaria_mercado_pago
+					SET access_token = in_access_token,
+						public_key = in_public_key,
+						client_id = in_client_id,
+						client_secret = in_client_secret
+					WHERE cuenta_bancaria_mercado_pago.id_cuenta_bancaria = in_id_cuenta_bancaria;
+			ELSE
+			
+				INSERT INTO cuenta_bancaria_mercado_pago (id_cuenta_bancaria, access_token, public_key, client_id, client_secret, marca_baja) 
+				VALUES (in_id_cuenta_bancaria, in_access_token, in_public_key, in_client_id, in_client_secret, false);
+			
+			END IF;
+		END IF;	
 	ELSE
 		aux_id_cuenta_bancaria := 0;
 	END IF;
@@ -1932,12 +1958,18 @@ SELECT	cn.id_cuenta_bancaria,
 		cn.nombre,
 		cn.alias,
 		cn.cbu,
+		COALESCE(cbmp.access_token, '') 	as access_token,
+		COALESCE(cbmp.public_key, '') 		as public_key,
+		COALESCE(cbmp.client_id, '') 		as client_id,
+		COALESCE(cbmp.client_secret, '') 	as client_secret,
 		cn.fecha_hora_creacion,
 		cn.marca_baja
 FROM cuenta_bancaria cn JOIN oficina o
 			ON (cn.id_oficina = o.id_oficina)
 		JOIN billetera b
-			ON (cn.id_billetera = b.id_billetera);
+			ON (cn.id_billetera = b.id_billetera)
+		LEFT JOIN cuenta_bancaria_mercado_pago cbmp
+			ON (cn.id_cuenta_bancaria = cbmp.id_cuenta_bancaria);
 --select * from v_Cuentas_Bancarias
 
 -- DROP VIEW v_Cuentas_Bancarias_Descargas;

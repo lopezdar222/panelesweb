@@ -1131,6 +1131,12 @@ const crear_Cuenta_Cobro = async (id_oficina) => {
     const cbu = document.getElementById('cbu');
     const comboEstado = document.getElementById('estado');
     const estado = comboEstado.options[comboEstado.selectedIndex].value;
+    const comboBilletera = document.getElementById('billetera');
+    const billetera = comboBilletera.options[comboBilletera.selectedIndex].value;
+    const access_token = document.getElementById('access_token');
+    const public_key = document.getElementById('public_key');
+    const client_id = document.getElementById('client_id');
+    const client_secret = document.getElementById('client_secret');
     let alias_aux = alias.value;
 
     if (nombre.value == '') {
@@ -1146,8 +1152,30 @@ const crear_Cuenta_Cobro = async (id_oficina) => {
         creando_cuenta_cobro = 0;
         return;
     }
+    if (access_token.value == '') {
+        access_token.value = '-';
+    }
+    if (public_key.value == '') {
+        public_key.value = '-';
+    }
+    if (client_id.value == '') {
+        client_id.value = '-';
+    }
+    if (client_secret.value == '') {
+        client_secret.value = '-';
+    }
     try {
-        const response = await fetch(`/crear_cuenta_bancaria/${id_oficina}/${id_usuario}/${nombre.value}/${alias_aux}/${cbu.value}/${estado}`, {
+        const response = await fetch(`/crear_cuenta_bancaria/${id_oficina}` +
+                                                            `/${id_usuario}` +
+                                                            `/${nombre.value}` +
+                                                            `/${alias_aux}` +
+                                                            `/${cbu.value}` +
+                                                            `/${estado}` +
+                                                            `/${billetera}` +
+                                                            `/${access_token.value}` +
+                                                            `/${public_key.value}` +
+                                                            `/${client_id.value}` +
+                                                            `/${client_secret.value}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'}

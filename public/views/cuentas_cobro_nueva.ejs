@@ -40,6 +40,42 @@
                     </select>
                 </th>
             </tr>
+            <tr>
+                <th colspan="2"> 
+                    <label for="billetera">Billetera:</label><br>
+                    <select id="billetera">
+                        <% datos_billeteras.forEach(function(billetera) { %>
+                            <option value="<%= billetera.id_billetera %>">
+                                <%= billetera.billetera %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </th>
+            </tr>
+            <tr>
+                <th colspan="2">
+                    <label for="access_token">(Sólo para Mercado Pago) Access Token:</label>
+                    <input type="text" id="access_token" value="-">         
+                </th>
+            </tr>
+            <tr>
+                <th colspan="2">
+                    <label for="public_key">(Sólo para Mercado Pago) Public Key:</label>
+                    <input type="text" id="public_key" value="-">         
+                </th>  
+            </tr>
+            <tr>
+                <th colspan="2">
+                    <label for="client_id">(Sólo para Mercado Pago) Client Id:</label>
+                    <input type="text" id="client_id" value="-">         
+                </th>
+            </tr>
+            <tr>
+                <th colspan="2">
+                    <label for="client_secret">(Sólo para Mercado Pago) Client Secret:</label>
+                    <input type="text" id="client_secret" value="-">         
+                </th>  
+            </tr>
         </table>
     <%} else {%>
         <h3><%= message %></h3>

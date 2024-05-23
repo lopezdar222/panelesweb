@@ -992,11 +992,15 @@ app.get('/cuentas_cobro_nueva', async (req, res) => {
     // Obtener los parámetros de la URL
     const id_oficina = parseInt(req.query.id_oficina, 10);
     try {
-        let query = `select oficina from oficina where id_oficina = ${id_oficina} `;
+        const query = `select oficina from oficina where id_oficina = ${id_oficina} `;
         const result = await db.handlerSQL(query);
         const oficina = result.rows[0].oficina;
-
-        res.render('cuentas_cobro_nueva', { message: 'ok', title: 'Creación de Cuenta de Cobro', id_oficina : id_oficina, oficina : oficina });
+        
+        const query2 = `select id_billetera, billetera from billetera;`;
+        const result2 = await db.handlerSQL(query2);
+        const datos_billeteras = result2.rows;
+        
+        res.render('cuentas_cobro_nueva', { message: 'ok', title: 'Creación de Cuenta de Cobro', id_oficina : id_oficina, oficina : oficina, datos_billeteras : datos_billeteras });
     }
     catch (error) {
         res.render('cuentas_cobro_nueva', { message: 'error', title: 'Creación de Cuenta de Cobro'});
@@ -1856,14 +1860,14 @@ app.get('/logout', async (req, res) => {
     await db.handlerSQL(cierre);
 });
 
-app.post('/crear_cuenta_bancaria/:id_oficina/:id_usuario/:nombre/:alias/:cbu/:estado', async (req, res) => {
+app.post('/crear_cuenta_bancaria/:id_oficina/:id_usuario/:nombre/:alias/:cbu/:estado/:billetera/:access_token/:public_key/:client_id/:client_secret', async (req, res) => {
     try {    
-            const { id_oficina, id_usuario, nombre, alias, cbu, estado } = req.params;
+            const { id_oficina, id_usuario, nombre, alias, cbu, estado, billetera, access_token, public_key, client_id, client_secret } = req.params;
             let alias_aux  = '';
             if (alias !== 'XXXXX') {
                 alias_aux = alias;
             }
-            const query = `select * from Crear_Cuenta_Bancaria(${id_oficina}, ${id_usuario}, '${nombre}', '${alias_aux}', '${cbu}' , ${estado})`;
+            const query = `select * from Crear_Cuenta_Bancaria(${id_oficina}, ${id_usuario}, '${nombre}', '${alias_aux}', '${cbu}' , ${estado}, ${billetera}, '${access_token}', '${public_key}', '${client_id}', '${client_secret}')`;
             //console.log(query);
             const result = await db.handlerSQL(query);
             if (result.rows[0].id_cuenta_bancaria == 0) {
