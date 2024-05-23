@@ -12,8 +12,10 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser <br>
 
 * https://platzi.com/clases/1759-fundamentos-node/25188-herramientas-para-ser-mas-felices-nodemon-y-pm2/ <br>
 
+* sudo apt install redis-server
+
 * En la carpeta de proyecto ejecutar:
 
 npm init
 npm install express bcrypt body-parser express-session pg connect-pg-simple ip ejs axios multer
-npm install ws
+npm install ws redis

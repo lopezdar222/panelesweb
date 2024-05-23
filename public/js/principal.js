@@ -37,6 +37,8 @@ let datos = [];
 let datosOriginales = [];
 let paginacionActual = 1;
 let ws = null;
+let alertaMonitorLanding = Date.now();
+const alertaMonitorLandingSegundos = 15;
 
 // Función para cargar el contenido dinámico desde el servidor
 function cargarContenido(url) {
@@ -121,7 +123,7 @@ async function cargarContenidoChats(id_cliente, mensaje, alerta) {
                 chatMessages.scrollTop = chatMessages.scrollHeight;
                 const texto_mensaje = document.getElementById('message-input');
                 texto_mensaje.focus();
-                enviarMensaje('chat', id_cliente);
+                enviarMensaje(0, 'chat', id_cliente);
             })
             //.then(enviarMensaje('chat', id_cliente))
             .catch(error => {
@@ -148,7 +150,7 @@ async function cargarContenidoChats(id_cliente, mensaje, alerta) {
                 const texto_mensaje = document.getElementById('message-input');
                 texto_mensaje.value = '';
                 texto_mensaje.focus();
-                enviarMensaje('chat', id_cliente);
+                enviarMensaje(0, 'chat', id_cliente);
             }
         })
         //.then(enviarMensaje('chat', id_cliente))
@@ -354,7 +356,7 @@ function abrirModal(opcion = 0, par1 = '', par2 = '', par3 = '') {
             id_cliente = Number(par1);
             url = `/usuarios_clientes_chat?id_cliente=${encodeURIComponent(id_cliente)}`;
             cargarContenidoModal(url);
-            enviarMensaje('actualiza', id_cliente);
+            enviarMensaje(0, 'actualiza', id_cliente);
             break;
         case 25:
             id_cliente = par1;
@@ -1036,6 +1038,12 @@ const modificar_Cuenta_Cobro = async (id_cuenta_bancaria) => {
     const cbu = document.getElementById('cbu');
     const comboEstado = document.getElementById('estado');
     const estado = comboEstado.options[comboEstado.selectedIndex].value;
+    const comboBilletera = document.getElementById('billetera');
+    const billetera = comboBilletera.options[comboBilletera.selectedIndex].value;
+    const access_token = document.getElementById('access_token');
+    const public_key = document.getElementById('public_key');
+    const client_id = document.getElementById('client_id');
+    const client_secret = document.getElementById('client_secret');
     let alias_aux = alias.value;
 
     if (nombre.value == '') {
@@ -1044,9 +1052,6 @@ const modificar_Cuenta_Cobro = async (id_cuenta_bancaria) => {
         return;
     }
     if (alias.value == '') {
-        /*msgResultado.innerHTML = 'Alias Vacío!';
-        modificando_cuenta_cobro = 0;
-        return;*/
         alias_aux = 'XXXXX';
     }
     if (cbu.value == '') {
@@ -1054,9 +1059,31 @@ const modificar_Cuenta_Cobro = async (id_cuenta_bancaria) => {
         modificando_cuenta_cobro = 0;
         return;
     }
+    if (access_token.value == '') {
+        access_token.value = '-';
+    }
+    if (public_key.value == '') {
+        public_key.value = '-';
+    }
+    if (client_id.value == '') {
+        client_id.value = '-';
+    }
+    if (client_secret.value == '') {
+        client_secret.value = '-';
+    }
     
     try {
-        const response = await fetch(`/modificar_cuenta_bancaria/${id_usuario}/${id_cuenta_bancaria}/${nombre.value}/${alias_aux}/${cbu.value}/${estado}`, {
+        const response = await fetch(`/modificar_cuenta_bancaria/${id_usuario}` +
+                                                                `/${id_cuenta_bancaria}` +
+                                                                `/${nombre.value}` +
+                                                                `/${alias_aux}` +
+                                                                `/${cbu.value}` +
+                                                                `/${estado}` +
+                                                                `/${billetera}` +
+                                                                `/${access_token.value}` +
+                                                                `/${public_key.value}` +
+                                                                `/${client_id.value}` +
+                                                                `/${client_secret.value}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'}
@@ -1161,7 +1188,7 @@ const cargar_Retiro = async (id_operacion, id_cliente, monto_retiro) => {
             btnRechazar.innerHTML = '';
         }*/
         if (data.codigo == 1) {
-            enviarMensaje('sol_retiro_aceptada', id_cliente);
+            enviarMensaje(0, 'sol_retiro_aceptada', id_cliente);
         }
         cargando_retiro = 0;
     } catch (error) {
@@ -1216,7 +1243,7 @@ const cargar_Retiro_Manual = async (id_cliente) => {
         const data = await response.json();
         msgResultado.innerHTML = data.message;
         if (data.codigo == 1) {
-            enviarMensaje('sol_carga_aceptada', id_cliente);
+            enviarMensaje(0, 'sol_carga_aceptada', id_cliente);
         }
         cargando_retiro_manual = 0;
     } catch (error) {
@@ -1272,7 +1299,7 @@ const cargar_Cobro_Manual = async (id_cliente) => {
         });
         const data = await response.json();
         msgResultado.innerHTML = data.message;
-        enviarMensaje('sol_carga_aceptada', id_cliente);
+        enviarMensaje(0, 'sol_carga_aceptada', id_cliente);
         cargando_cobro_manual = 0;
     } catch (error) {
         cargando_cobro_manual = 0;
@@ -1311,7 +1338,7 @@ const cargar_Cobro = async (id_operacion, id_cliente, cantidad_cargas, id_client
         });
         const data = await response.json();
         if (data.codigo == 1) {
-            enviarMensaje('sol_carga_aceptada', id_cliente);
+            enviarMensaje(0, 'sol_carga_aceptada', id_cliente);
         }
         if (cantidad_cargas == 0 && id_cliente_referente > 0) {
             msgBonoReferido = await cargar_Bono_Referido(id_cliente_referente, monto_bono.value, id_cuenta_bancaria, id_operacion);
@@ -1335,7 +1362,7 @@ const cargar_Bono_Referido = async (id_cliente, monto_bono, id_cuenta_bancaria, 
         });
         const data = await response.json();
         if (data.codigo == 1) {
-            enviarMensaje('sol_bono_referido', id_cliente);
+            enviarMensaje(0, 'sol_bono_referido', id_cliente);
         }
         return data.message;
     } catch (error) {
@@ -1362,7 +1389,7 @@ const rechazar_Retiro = async (id_operacion, id_cliente) => {
         msgResultado.innerHTML = data.message;
         btnRechazar.innerHTML = '';
         if (data.codigo == 1) {
-            enviarMensaje('sol_retiro_rechazada', id_cliente);
+            enviarMensaje(0, 'sol_retiro_rechazada', id_cliente);
         }
         rechazando_retiro = 0;
     } catch (error) {
@@ -1388,7 +1415,7 @@ const rechazar_Cobro = async (id_operacion, id_cliente) => {
         const data = await response.json();
         msgResultado.innerHTML = data.message;
         if (data.codigo == 1) {
-            enviarMensaje('sol_carga_rechazada', id_cliente);
+            enviarMensaje(0, 'sol_carga_rechazada', id_cliente);
         }
         rechazando_cobro = 0;
     } catch (error) {
@@ -1590,11 +1617,14 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                 fetch(url_ultima_invocada);
                 window.location.href = `/`;
             });
+
+            document.getElementById('close-btn').click();
+
             //Inicializar cliente Websocket********************************/
             ws = new WebSocket('wss://paneleslanding.com:8080');
 
             ws.onopen = function(event) {
-                enviarMensaje('', 0);
+                enviarMensaje(1, '', 0);
             };
 
             // Evento cuando se recibe un mensaje del servidor
@@ -1614,7 +1644,18 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                 } else {
                     if (url_ultima_invocada.indexOf('monitoreo_landingweb') !== -1 
                             && url_ultima_invocada.indexOf('monitoreo_landingweb_fijo') == -1 ) {
+                        //alert(`llega`);
                         cargarContenido(url_ultima_invocada);
+                        /*let currentTimestamp = Date.now();
+                        let difference = currentTimestamp - alertaMonitorLanding;
+                        let differenceInSeconds = difference / 1000
+                        alert(`Diferencia = ${differenceInSeconds}`);
+                        if (differenceInSeconds >= alertaMonitorLandingSegundos) {
+                            cargarContenido(url_ultima_invocada);
+                            alertaMonitorLanding = currentTimestamp;
+                        } else {
+                            console.log('oleee');
+                        }*/
                     } else {
                         actualizarAlertaMonitoreo(data.id_cliente);
                         alertaSistemaOperativo(data.alerta, data.id_cliente);
@@ -1632,8 +1673,9 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
     }
 });
 
-function enviarMensaje(mensaje, id_cliente) {
+function enviarMensaje(inicio, mensaje, id_cliente) {
     const message = { 
+                tipo: inicio,
                 es_cliente: 0,
                 ws_cliente: id_usuario,
                 id_cliente : id_cliente,

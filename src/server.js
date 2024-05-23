@@ -881,6 +881,8 @@ app.get('/cuentas_cobro', async (req, res) => {
         let query2 = `select    id_cuenta_bancaria,` +
                                 `id_oficina,` +
                                 `oficina,` +
+                                `id_billetera,` +
+                                `billetera,` +
                                 `nombre,` +
                                 `alias,` +
                                 `cbu,` +
@@ -1007,23 +1009,36 @@ app.get('/cuentas_cobro_editar', async (req, res) => {
     try {
         //console.log(`select * from v_Sesion_Bot where orden = 1 and id_operador = ${id_operador};`);
 
-        let query2 = `select    id_cuenta_bancaria,` +
+        const query = `select    id_cuenta_bancaria,` +
                                 `id_oficina,` +
                                 `oficina,` +
+                                `id_billetera,` +
+                                `billetera,` +
                                 `nombre,` +
                                 `alias,` +
                                 `cbu,` +
+                                `access_token,` +
+                                `public_key,` +
+                                `client_id,` +
+                                `client_secret,` +
                                 `TO_CHAR(fecha_hora_creacion, 'DD/MM/YYYY HH24:MI:SS') as fecha_hora_creacion,` +
                                 `marca_baja ` +
                         `from v_Cuentas_Bancarias where id_cuenta_bancaria = ${id_cuenta}`;
-        const result2 = await db.handlerSQL(query2);
-        if (result2.rows.length === 0) {
+        const result = await db.handlerSQL(query);
+        if (result.rows.length === 0) {
             res.render('cuentas_cobro_editar', { message: 'Cuentas de Cobro no encontrada', title: 'Edición de Cuenta de Cobro'});
             return;
         }
-        const datos = result2.rows;
+        const datos = result.rows;
 
-        res.render('cuentas_cobro_editar', { message: 'ok', title: 'Edición de Cuenta de Cobro', datos: datos });
+        const query2 = `select id_billetera, ` +
+                            `billetera ` +
+                    `from billetera where marca_baja = false`;
+        //console.log(query2);
+        const result2 = await db.handlerSQL(query2);
+        const datos_billeteras = result2.rows;
+
+        res.render('cuentas_cobro_editar', { message: 'ok', title: 'Edición de Cuenta de Cobro', datos: datos, datos_billeteras : datos_billeteras });
     }
     catch (error) {
         res.render('cuentas_cobro_editar', { message: 'error', title: 'Edición de Cuenta de Cobro'});
@@ -1884,9 +1899,9 @@ app.post('/descargar_cuenta_bancaria/:id_usuario/:id_cuenta_bancaria', async (re
     }
 });
  
-app.post('/modificar_cuenta_bancaria/:id_usuario/:id_cuenta_bancaria/:nombre/:alias/:cbu/:estado', async (req, res) => {
+app.post('/modificar_cuenta_bancaria/:id_usuario/:id_cuenta_bancaria/:nombre/:alias/:cbu/:estado/:billetera/:access_token/:public_key/:client_id/:client_secret', async (req, res) => {
     try {    
-            const { id_usuario, id_cuenta_bancaria, nombre, alias, cbu, estado } = req.params;
+            const { id_usuario, id_cuenta_bancaria, nombre, alias, cbu, estado, billetera, access_token, public_key, client_id, client_secret } = req.params;
             let alias_aux  = '';
             if (alias != 'XXXXX') {
                 alias_aux = alias;
@@ -1909,7 +1924,7 @@ app.post('/modificar_cuenta_bancaria/:id_usuario/:id_cuenta_bancaria/:nombre/:al
             } 
             //console.log(alertaInactivas);
             if (alertaInactivas == 0) {
-                const query = `select * from Modificar_Cuenta_Bancaria(${id_usuario}, ${id_cuenta_bancaria}, '${nombre}', '${alias_aux}', '${cbu}', ${estado})`;
+                const query = `select * from Modificar_Cuenta_Bancaria(${id_usuario}, ${id_cuenta_bancaria}, '${nombre}', '${alias_aux}', '${cbu}', ${estado}, ${billetera}, '${access_token}', '${public_key}', '${client_id}', '${client_secret}')`;
                 //console.log(query);
                 const result = await db.handlerSQL(query);
                 if (result.rows[0].id_cuenta_bancaria == 0) {

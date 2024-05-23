@@ -7,6 +7,16 @@
             <br>Usuario: <%= datos[0].usuario %>
         <%}%>
     </head>
+    <style>
+        .container {
+            display: flex;
+            width: 100%; /* Establece el ancho de la tabla al 100% del contenedor */
+        }
+        table {
+            width: 100%; /* Establece el ancho de la tabla al 100% del contenedor */
+            border-collapse: collapse; /* Combina los bordes de las celdas */
+        }
+    </style>
     <body>
         <%if (message === 'ok') {%>
             <table>

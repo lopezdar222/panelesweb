@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS billetera
 	id_usuario_creacion integer NOT NULL DEFAULT 0,
     fecha_hora_ultima_modificacion timestamp NOT NULL,
 	id_usuario_ultima_modificacion integer NOT NULL DEFAULT 0,
-    PRIMARY KEY (id_cuenta_bancaria)
+    PRIMARY KEY (id_billetera)
 );
 
 DROP TABLE IF EXISTS cuenta_bancaria_descarga;
@@ -344,6 +344,9 @@ insert into rol (nombre_rol, fecha_hora_creacion) values ('Administrador', NOW()
 insert into rol (nombre_rol, fecha_hora_creacion) values ('Encargado', NOW());
 insert into rol (nombre_rol, fecha_hora_creacion) values ('Operador', NOW());
 --select * from rol;
+
+insert into billetera(billetera, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+values ('Mercado Pago', false, now(), 1, now(), 1);
 
 --DROP FUNCTION Insertar_Usuario(in_id_usuario INTEGER, usr VARCHAR(50), pass VARCHAR(200), rol INTEGER, ofi INTEGER);
 CREATE OR REPLACE FUNCTION Insertar_Usuario(in_id_usuario INTEGER, usr VARCHAR(50), pass VARCHAR(200), rol INTEGER, ofi INTEGER) RETURNS VOID AS $$
@@ -1665,7 +1668,7 @@ DECLARE aux_id_cliente INTEGER;
 DECLARE aux_porcentaje_origen1 DECIMAL(10, 2);
 DECLARE aux_cantidad_cargas INTEGER;
 BEGIN
-	aux_porcentaje_origen1 := 0.5;
+	aux_porcentaje_origen1 := 0.25;
 	
 	SELECT	opc.id_operacion_carga, op.id_cliente
 	INTO 	aux_id_operacion_carga, aux_id_cliente
@@ -1772,7 +1775,7 @@ DECLARE aux_id_notificacion_carga INTEGER;
 DECLARE aux_id_usuario INTEGER;
 DECLARE aux_id_cuenta_bancaria INTEGER;
 BEGIN
-	aux_porcentaje_origen1 := 0.5;
+	aux_porcentaje_origen1 := 0.25;
 	
 	SELECT	opc.id_operacion_carga, op.id_cliente, nc.id_notificacion_carga, n.id_usuario, n.id_cuenta_bancaria
 	INTO 	aux_id_operacion_carga, aux_id_cliente, aux_id_notificacion_carga, aux_id_usuario, aux_id_cuenta_bancaria
@@ -1924,13 +1927,17 @@ CREATE OR REPLACE VIEW v_Cuentas_Bancarias AS
 SELECT	cn.id_cuenta_bancaria,
 		cn.id_oficina,
 		o.oficina,
+		cn.id_billetera,
+		b.billetera,
 		cn.nombre,
 		cn.alias,
 		cn.cbu,
 		cn.fecha_hora_creacion,
 		cn.marca_baja
 FROM cuenta_bancaria cn JOIN oficina o
-		ON (cn.id_oficina = o.id_oficina);
+			ON (cn.id_oficina = o.id_oficina)
+		JOIN billetera b
+			ON (cn.id_billetera = b.id_billetera);
 --select * from v_Cuentas_Bancarias
 
 -- DROP VIEW v_Cuentas_Bancarias_Descargas;
@@ -2529,18 +2536,15 @@ select 	oficina,
 from v_Clientes_Operaciones
 where id_estado = 2
 and id_accion in (1, 2, 5, 6, 9)
-and fecha_hora_proceso >= '2024-05-20 00:00:00'
+and fecha_hora_proceso >= '2024-05-23 00:00:00'
+and fecha_hora_proceso < '2024-05-24 00:00:00'
 group by oficina,
 		agente_usuario, 
 		plataforma, Tipo
 order by oficina,
 		agente_usuario, 
 		plataforma, Tipo;
-
-select * from v_Clientes_Operaciones where id_cliente = 3060
-select * from cliente where id_cliente = 3060
-
-
+-- 20/5 2532
 -- 18/5 1670
 -- 17/5 1709
 -- 16/5 1645
@@ -2549,6 +2553,23 @@ select * from cliente where id_cliente = 3060
 
 SELECT * FROM registro_sesiones_sockets order by 1 desc limit 2000
 
+update cliente set id_cliente_ext = 4598399, id_cliente_db = 8
+where id_cliente = 137
+
+select * from agente where id_agente = 3
+select * from v_Clientes_Operaciones where cliente_usuario = 'olgax522'
+select * from cliente where id_cliente = 3060
+select * from v_Cuentas_Bancarias where id_oficina = 1
+select * from v_Cuenta_Bancaria_Mercado_Pago where id_oficina = 8
+SELECT * FROM oficina
+select * from v_Notificaciones_Cargas where id_cuenta_bancaria = 29
+select * from v_Console_Logs
+
+select * from v_Console_Logs;
+SELECT * 
+FROM registro_sesiones_sockets 
+where fecha_hora >= '2024-05-20 14:00:00'
+order by 1
 
 select *
 from v_Clientes_Operaciones 
@@ -2581,14 +2602,30 @@ SELECT substr(translate(encode(gen_random_bytes(40), 'base64'), '/+', 'ab'), 1, 
 INTO aux_token;
 
 select * from v_Cuenta_Bancaria_Mercado_Pago 
-where id_oficina = 2
+where id_oficina > 2
 order by 1
+
+select * from v_Console_Logs
 
 select * from cliente where cliente_usuario = 'paulcarabajal688p'
 select * from cliente_chat where id_cliente = 2340
 
 /*****************************/
 /*Anulacion de notificaciones*/
+
+select * from cuenta_bancaria where id_cuenta_bancaria = 1
+select * from usuario where id_usuario = 4
+
+select * from Registrar_Notificacion(4, 1, 'Pago de Prueba', 'Pago de Prueba', 'Pago de Prueba 4', 1)
+
+select * from Registrar_Notificacion_Carga(9642, 'miguel.jorge958@gmail.com jorgemiguel', 25000)
+
+select 	TO_CHAR(fecha_hora, 'YYYY-MM-DD HH24:MI') AS fecha_hora,
+    	COUNT(*) AS total_eventos
+from notificacion
+where fecha_hora >= '2024-05-20 14:00:00'
+group by TO_CHAR(fecha_hora, 'YYYY-MM-DD HH24:MI')
+order by 1;
 
 SELECT n.*
 FROM notificacion n JOIN notificacion_carga nc
@@ -2599,7 +2636,7 @@ FROM notificacion n JOIN notificacion_carga nc
 	   	AND nc.marca_procesado = false)
 ORDER BY n.fecha_hora
 
-SELECT  id_notificacion
+SELECT  *
 FROM	v_Notificaciones_Cargas
 	WHERE fecha_hora < NOW() - INTERVAL '1 hour'
 	AND anulada = false
@@ -2626,5 +2663,12 @@ order by 2 desc
 --order by cc.id_cliente_chat desc
 update cliente set cliente_usuario = lower(trim(cliente_usuario));
 
-select * from v_Clientes_Operaciones
+select * from v_Clientes_Operaciones 
+where id_oficina = 4
+and id_accion = 1
+order by fecha_hora_operacion desc
 
+select * from operacion where id_operacion = 19188
+select * from operacion_carga where id_operacion = 19188
+select * from usuario where id_usuario = 18
+select * from oficina

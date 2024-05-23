@@ -17,6 +17,7 @@ async function anular_Notificaciones_Landing() {
                             `FROM v_Notificaciones_Cargas ` +
                             `WHERE fecha_hora < NOW() - INTERVAL '1 hour' ` +
                             `AND anulada = false ` +
+                            `AND id_cuenta_bancaria > 1 ` +
                             `AND id_operacion_carga IS NULL ` +
                             `AND marca_procesado = false ` +
                             `ORDER BY fecha_hora LIMIT 1`;

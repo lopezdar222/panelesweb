@@ -3,25 +3,40 @@
     <h2><%= title %></h2>
     <h3>Cuenta "<%= datos[0].alias %>" de Oficina "<%= datos[0].oficina %>"</h3> 
 </head>
+<style>
+    .container {
+        display: flex;
+        width: 100%; /* Establece el ancho de la tabla al 100% del contenedor */
+    }
+    table {
+        width: 100%; /* Establece el ancho de la tabla al 100% del contenedor */
+        border-collapse: collapse; /* Combina los bordes de las celdas */
+    }
+</style>
 <body>
     <%if (message === 'ok') {%>
         <br>
         <table>
             <tr>
                 <th>      
+                    <label>Id Cuenta: <%= datos[0].id_cuenta_bancaria %></label>       
+                </th>
+                <th>      
                     <label for="nombre">Nombre:</label>
                     <input type="text" id="nombre" maxlength="200" value="<%= datos[0].nombre %>">         
-                </th>
-                <th>
-                    <label for="alias">Alias:</label>
-                    <input type="text" id="alias" maxlength="200" value="<%= datos[0].alias %>">         
                 </th>
             </tr>
             <tr>
                 <th>
+                    <label for="alias">Alias:</label>
+                    <input type="text" id="alias" maxlength="200" value="<%= datos[0].alias %>">         
+                </th>
+                <th>
                     <label for="cbu">CBU:</label>
                     <input type="tel" id="cbu" pattern="[0-9]{50}" required value="<%= datos[0].cbu %>">         
                 </th>  
+            </tr>
+            <tr>
                 <th> 
                     <label for="estado">Estado:</label><br>
                     <% if (datos[0].marca_baja == false) { %>
@@ -38,6 +53,44 @@
                         </select>
                     <% } %>
                 </th>
+                <th> 
+                    <label for="billetera">Billetera:</label><br>
+                    <select id="billetera">
+                        <% datos_billeteras.forEach(function(billetera) { %>
+                            <option value="<%= billetera.id_billetera %>" 
+                                    <% if (billetera.id_billetera == datos[0].id_billetera) { %>
+                                        selected
+                                    <% } %>
+                                    >
+                                <%= billetera.billetera %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </th>
+            </tr>
+            <tr>
+                <th colspan="2">
+                    <label for="access_token">(Sólo para Mercado Pago) Access Token:</label>
+                    <input type="text" id="access_token" value="<%= datos[0].access_token %>">         
+                </th>
+            </tr>
+            <tr>
+                <th colspan="2">
+                    <label for="public_key">(Sólo para Mercado Pago) Public Key:</label>
+                    <input type="text" id="public_key" value="<%= datos[0].public_key %>">         
+                </th>  
+            </tr>
+            <tr>
+                <th colspan="2">
+                    <label for="client_id">(Sólo para Mercado Pago) Client Id:</label>
+                    <input type="text" id="client_id" value="<%= datos[0].client_id %>">         
+                </th>
+            </tr>
+            <tr>
+                <th colspan="2">
+                    <label for="client_secret">(Sólo para Mercado Pago) Client Secret:</label>
+                    <input type="text" id="client_secret" value="<%= datos[0].client_secret %>">         
+                </th>  
             </tr>
         </table>
     <%} else {%>
