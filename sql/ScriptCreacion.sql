@@ -94,6 +94,8 @@ CREATE TABLE IF NOT EXISTS billetera
 (
     id_billetera serial NOT NULL,
     billetera character varying(100) NOT NULL,
+    notificacion_descripcion character varying(100) NOT NULL DEFAULT '',
+    notificacion_activa boolean NOT NULL DEFAULT true,
     marca_baja boolean NOT NULL DEFAULT false,
     fecha_hora_creacion timestamp NOT NULL,
 	id_usuario_creacion integer NOT NULL DEFAULT 0,
@@ -345,8 +347,19 @@ insert into rol (nombre_rol, fecha_hora_creacion) values ('Encargado', NOW());
 insert into rol (nombre_rol, fecha_hora_creacion) values ('Operador', NOW());
 --select * from rol;
 
-insert into billetera(billetera, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
-values ('Mercado Pago', false, now(), 1, now(), 1);
+insert into billetera(billetera, notificacion_descripcion, notificacion_activa, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+values ('Mercado Pago', 'com.mercadopago.wallet', true, false, now(), 1, now(), 1);
+insert into billetera(billetera, notificacion_descripcion, notificacion_activa, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+values ('Open Bank', 'ar.openbank.modelbank', true, false, now(), 1, now(), 1);
+insert into billetera(billetera, notificacion_descripcion, notificacion_activa, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+values ('Brubank', 'com.brubank', true, false, now(), 1, now(), 1);
+insert into billetera(billetera, notificacion_descripcion, notificacion_activa, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+values ('Telepagos', 'com.telepagos', true, false, now(), 1, now(), 1);
+insert into billetera(billetera, notificacion_descripcion, notificacion_activa, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+values ('Ualá', 'ar.uala', false, false, now(), 1, now(), 1);
+insert into billetera(billetera, notificacion_descripcion, notificacion_activa, marca_baja, fecha_hora_creacion, id_usuario_creacion, fecha_hora_ultima_modificacion, id_usuario_ultima_modificacion)
+values ('Belo', 'com.belo.android', false, false, now(), 1, now(), 1); 
+--select * from billetera;
 
 --DROP FUNCTION Insertar_Usuario(in_id_usuario INTEGER, usr VARCHAR(50), pass VARCHAR(200), rol INTEGER, ofi INTEGER);
 CREATE OR REPLACE FUNCTION Insertar_Usuario(in_id_usuario INTEGER, usr VARCHAR(50), pass VARCHAR(200), rol INTEGER, ofi INTEGER) RETURNS VOID AS $$
@@ -1058,6 +1071,7 @@ SELECT 	cb.id_oficina,
 		cb.alias,
 		cb.cbu,
 		cb.marca_baja,
+		cb.id_billetera,
 		coalesce(cbc.cantidad_cargas, 0)	as cantidad_cargas,
 		coalesce(cbc.monto_cargas, 0)		as monto_cargas,
 		DENSE_RANK() OVER (PARTITION BY cb.id_oficina, o.oficina
@@ -2153,6 +2167,7 @@ SELECT 	cl.id_cliente,
 		COALESCE(opcb.nombre, '')	AS carga_cuenta_bancaria_nombre,
 		COALESCE(opcb.alias, '')	AS carga_cuenta_bancaria_alias,
 		COALESCE(opcb.cbu, '')	AS carga_cuenta_bancaria_cbu,
+		COALESCE(opcb.id_billetera, 0)	AS id_billetera,
 		COALESCE(nc.id_notificacion, 0)	AS id_notificacion
 FROM cliente cl JOIN operacion o
 			ON (cl.id_cliente = o.id_cliente
@@ -2188,7 +2203,7 @@ FROM cliente cl JOIN operacion o
 			ON (nc.id_operacion_carga = opc.id_operacion_carga)
 WHERE cl.marca_baja = false;
 --select * from v_Clientes_Operaciones where id_cliente = 18 order by id_operacion desc
---221msec
+--600msec
 
 --DROP VIEW v_Clientes
 CREATE OR REPLACE VIEW v_Clientes AS
@@ -2556,7 +2571,18 @@ FROM	notificacion n JOIN notificacion_carga nc
 				ON (pl.id_plataforma = ag.id_plataforma); 
 --select * from v_Notificaciones_Cargas order by fecha_hora_procesado desc;
 
-select 	oficina,
+select 	TO_CHAR(fecha_hora, 'YYYY-MM-DD HH24:MI') AS fecha_hora,
+    	COUNT(*) AS total_eventos
+from notificacion
+where fecha_hora >= '2024-05-20 14:00:00'
+group by TO_CHAR(fecha_hora, 'YYYY-MM-DD HH24:MI')
+order by 1;
+
+--DROP VIEW rpt_Operaciones_Diarias_Oficinas;
+CREATE OR REPLACE VIEW rpt_Operaciones_Diarias_Oficinas AS
+SELECT 	TO_CHAR(fecha_hora_proceso, 'YYYY-MM-DD') AS fecha,
+		id_oficina,
+		oficina,
 		agente_usuario, 
 		plataforma,
 		CASE WHEN id_notificacion > 0 THEN 'Automatico' ELSE 'Manual' END AS Tipo,
@@ -2565,17 +2591,19 @@ select 	oficina,
 		sum(CASE WHEN id_accion in (1, 5, 9) THEN 1 ELSE 0 END) as cant_cargas,
 		sum(retiro_importe)	as retiros,
 		sum(CASE WHEN id_accion in (2, 6) THEN 1 ELSE 0 END) as cant_retiros
-from v_Clientes_Operaciones
-where id_estado = 2
-and id_accion in (1, 2, 5, 6, 9)
-and fecha_hora_proceso >= '2024-05-23 00:00:00'
-and fecha_hora_proceso < '2024-05-24 00:00:00'
-group by oficina,
+FROM v_Clientes_Operaciones
+WHERE id_estado = 2
+AND id_accion in (1, 2, 5, 6, 9)
+GROUP BY TO_CHAR(fecha_hora_proceso, 'YYYY-MM-DD'),
+		id_oficina,
+		oficina,
 		agente_usuario, 
 		plataforma, Tipo
-order by oficina,
+ORDER BY TO_CHAR(fecha_hora_proceso, 'YYYY-MM-DD') DESC,
+		oficina,
 		agente_usuario, 
 		plataforma, Tipo;
+-- select * from rpt_Operaciones_Diarias_Oficinas
 -- 20/5 2532
 -- 18/5 1670
 -- 17/5 1709
@@ -2592,7 +2620,9 @@ select * from agente where id_agente = 3
 select * from v_Clientes_Operaciones where cliente_usuario = 'olgax522'
 select * from cliente where id_cliente = 3060
 select * from v_Cuentas_Bancarias where id_oficina = 1
-select * from v_Cuenta_Bancaria_Mercado_Pago where id_oficina = 8
+
+select *  from v_Cuenta_Bancaria_Mercado_Pago  where id_oficina = 9
+
 SELECT * FROM oficina
 select * from v_Notificaciones_Cargas where id_cuenta_bancaria = 29
 select * from v_Console_Logs

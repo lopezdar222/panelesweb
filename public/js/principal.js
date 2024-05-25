@@ -73,6 +73,9 @@ function cargarContenido(url) {
         if (url.indexOf('monitoreo_notificaciones') !== -1 ) {
             tiene_busqueda = true;
         }
+        if (url.indexOf('reportes') !== -1 ) {
+            tiene_busqueda = true;
+        }
         //Código para funcionalidad de búsqueda en tablas:
         if (tiene_busqueda) {
             const inputBusqueda = document.getElementById('search-input');
@@ -1532,7 +1535,6 @@ document.addEventListener('DOMContentLoaded', async (req, res) => {
                 usuario_rol.innerHTML = 'Administrador';
             } else if (id_rol === 2){
                 usuario_rol.innerHTML = 'Encargado';
-                menu07.style.display = 'none';
             } else {
                 usuario_rol.innerHTML = 'Operador';
                 menu02.style.display = 'none';

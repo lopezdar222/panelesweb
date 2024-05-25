@@ -11,97 +11,50 @@
       display: block; /* Para evitar problemas de alineación vertical */
       margin: auto; /* Centrar horizontalmente la imagen */
     }
-  </style>
+</style>
 <body>
+<!----------------------INICIO FILTER & SEARCH----------------------->
+    <% if (id_rol == 1) {%>
+        <h3>* Conexiones Activas: <%= conexiones %></h3>
+    <%} %>
+    <div class="wrapper">
+        <div class="search-container">
+            <input type="search" id="search-input" placeholder="Busqueda rápida ↯">
+            <span class="material-symbols-outlined">search</span>
+        </div>
+    </div>
     <table id="miTabla">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Oficina</th>
+                <th>Agente</th>
+                <th>Plataforma</th>
+                <th>Tipo</th>
+                <th>Cargas ($)</th>
+                <th>Bonos</th>
+                <th>#Cargas</th>
+                <th>Retiros ($)</th>
+                <th>#Retiros</th>
+            </tr>
+        </thead>
         <tbody>	
-            <tr>
-                <td>
-                    <h3>Operación Oficina Pina:</h3>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_actividad_dia.png" style="width:500px;height:500px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_concurrencias.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_cargas.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_tipos_cargas.png" style="width:500px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_retiros.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_otras_acciones.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_cargas_retiros_bonos.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_cargas_prom_desv.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <img src="https://panelesbot.com/reportes/rpt_conversiones.png" style="width:500px;"><br>
-                </td>
-                <td>
-                    <img src="https://panelesbot.com/reportes/rpt_monto_bono.png" style="width:500px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_cargas_hora.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_cargas_dia.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <img src="https://panelesbot.com/reportes/rpt_boxplot_cargas_todo.png" style="width:500px;"><br>
-                </td>
-                <td>
-                    <img src="https://panelesbot.com/reportes/rpt_boxplot_cargas.png" style="width:500px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_montos_cargas.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_origen_notis_ayer.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <img src="https://panelesbot.com/reportes/rpt_origen_notis_total.png" style="width:900px;height:600px;"><br>
-                </td>
-            </tr>
+            <% datos.forEach(function(dato) { %>
+                <tr>
+                    <td><%= dato.fecha %></td>
+                    <td><%= dato.oficina %></td>
+                    <td><%= dato.agente_usuario %></td>
+                    <td><%= dato.plataforma %></td>
+                    <td><%= dato.tipo %></td>
+                    <td><%= dato.cargas %></td>
+                    <td><%= dato.bonos %></td>
+                    <td><%= dato.cant_cargas %></td>
+                    <td><%= dato.retiros %></td>
+                    <td><%= dato.cant_retiros %></td>
+                </tr>
+            <% }); %>
         </tbody>
     </table>
+    <div id="paginacion" class="pagenumbers"></div>
 </body>
 </html>

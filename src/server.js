@@ -99,8 +99,25 @@ app.get('/reportes', async (req, res) => {
             res.render('reportes', { message: 'error de sesión', title: 'Reportes'});
             return;
         }
-        const id_operador = result.rows[0].id_operador;
-        res.render('reportes', { message: 'ok', title: 'Reportes', id_operador: id_operador, id_rol : id_rol });
+        const id_oficina = result.rows[0].id_oficina;
+        let query1 = `select * from rpt_Operaciones_Diarias_Oficinas`;
+        if (id_rol > 1) {
+            query1 = query1 + ` where id_oficina = ${id_oficina}`;
+        }
+        const result1 = await db.handlerSQL(query1);
+        if (result1.rows.length == 0) {
+            res.render('reportes', { message: 'No hay Inofmración', title: 'Reportes'});
+            return;
+        }
+        const datos = result1.rows;
+
+        let query2 = `SELECT * FROM registro_sesiones_sockets order by 1 desc limit 1`;
+        const result2 = await db.handlerSQL(query2);
+        let conexiones = 0;
+        if (result2.rows.length > 0) {
+            conexiones = result2.rows[0].conexiones;
+        }
+        res.render('reportes', { message: 'ok', title: 'Reportes', datos: datos, id_rol: id_rol, conexiones : conexiones});
     }
     catch (error) {
         res.render('reportes', { message: 'error', title: 'Reportes'});
@@ -996,7 +1013,7 @@ app.get('/cuentas_cobro_nueva', async (req, res) => {
         const result = await db.handlerSQL(query);
         const oficina = result.rows[0].oficina;
         
-        const query2 = `select id_billetera, billetera from billetera;`;
+        const query2 = `select id_billetera, billetera from billetera where marca_baja = false`; // and id_billetera = 1`;
         const result2 = await db.handlerSQL(query2);
         const datos_billeteras = result2.rows;
         
@@ -1037,7 +1054,7 @@ app.get('/cuentas_cobro_editar', async (req, res) => {
 
         const query2 = `select id_billetera, ` +
                             `billetera ` +
-                    `from billetera where marca_baja = false`;
+                    `from billetera where marca_baja = false`; // and id_billetera = 1`;
         //console.log(query2);
         const result2 = await db.handlerSQL(query2);
         const datos_billeteras = result2.rows;
@@ -2367,3 +2384,11 @@ const verificarNotificacionCarga = async (id_notificacion_carga, id_usuario, id_
         return 'error';
     }
 };
+
+async function colectorMem() {
+    if (global.gc) {
+        global.gc();
+    }
+};
+
+const intervalId_01 = setInterval(colectorMem, 60 * 1000); // (30.000 ms = 30 segundos)
