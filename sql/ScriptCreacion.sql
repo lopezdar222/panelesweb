@@ -854,6 +854,48 @@ $$ LANGUAGE plpgsql;
 --select * from Obtener_Token_Registro('c-4-9473764e8de991edc3899a179f8af9c1ce3d6ba');
 --select * from Obtener_Token_Registro('a-1-9473764e8de991edc3899a179f8af9c1ce3d6ba');
 
+--la mía: '201.235.221.173'
+CREATE OR REPLACE FUNCTION Obtener_Token_RegistroIP(in_id_token VARCHAR(60), in_ip VARCHAR(100))
+RETURNS TABLE (id_registro_token INTEGER) AS $$
+DECLARE
+    aux_id_registro_token INTEGER;
+    aux_cant_registros_ip INTEGER;
+BEGIN
+
+	SELECT COUNT(DISTINCT op.id_operacion)
+	INTO aux_cant_registros_ip
+	FROM operacion op JOIN cliente cl
+			ON (op.id_cliente = cl.id_cliente)
+		JOIN cliente_sesion cs
+			ON (cl.id_cliente = cs.id_cliente
+				AND cs.ip = in_ip)
+	WHERE op.id_accion = 8 
+			AND op.marca_baja = false
+			AND op.id_estado = 2
+			AND op.fecha_hora_creacion > NOW() - INTERVAL '72 hours';
+
+	IF (aux_cant_registros_ip < 2) THEN
+		SELECT rt.id_registro_token
+		INTO aux_id_registro_token
+		FROM registro_token rt
+		WHERE rt.id_token = in_id_token
+		and rt.activo = true;
+
+		IF aux_id_registro_token IS NOT NULL THEN
+			UPDATE registro_token
+			SET	ingresos = ingresos + 1
+			WHERE registro_token.id_registro_token = aux_id_registro_token;
+		ELSE
+			aux_id_registro_token := 0;
+		END IF;
+	ELSE
+		aux_id_registro_token := -1;
+	END IF;
+
+	RETURN QUERY SELECT aux_id_registro_token;
+END;
+$$ LANGUAGE plpgsql;
+
 --DROP FUNCTION Modificar_Agente(in_id_agente integer, in_id_usuario integer, pass VARCHAR(200), in_estado BOOLEAN, in_id_oficina INTEGER, in_id_plataforma INTEGER, in_bono_carga_1 INTEGER, in_bono_creacion INTEGER)
 CREATE OR REPLACE FUNCTION Modificar_Agente(in_id_agente integer, in_id_usuario integer, pass VARCHAR(200), in_estado BOOLEAN, in_id_oficina INTEGER, in_id_plataforma INTEGER, in_bono_carga_1 INTEGER, in_bono_creacion INTEGER) RETURNS VOID AS $$
 BEGIN
